@@ -30,6 +30,7 @@ Our project has three key objectives:
 1. Utilize N-body techniques to simulate 2-D complex plasma crystals.
 2. Extend the static point charge model for simulating ion wakes to a dynamic, self-adjusting model.
 3. Determine if the new model can replicate phenomena observed in the lab, such as spinning particle pairs.
+
 We hope that the model will help researchers gain a deeper understanding of how dust particles behave in a complex plasma.
 
 <a id="background"></a>
