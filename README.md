@@ -116,6 +116,7 @@ Refer to the changelog for details.
 <a id="license"></a>
 ## License
   - This code is protected by the MIT License and is free to use for personal and academic use.
+  - The Particle Modeling Group reserves the right to change this policy at any time.
 
 <a id="contributing-authors"></a>
 ## Contributing Authors
@@ -138,6 +139,3 @@ Program.
 ## Acknowledgements
 We would like to thank Tarleton State University’s Mathematics Department for use of
 their High-Performance Computing lab for the duration of this project.
-      
-
-The Particle Modeling Group reserves the right to change this policy at any time.
