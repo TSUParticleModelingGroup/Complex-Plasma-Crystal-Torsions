@@ -1,0 +1,81 @@
+
+|<-------        Help File for the Complex Plasmas Simulation Program.      ------->| 
+
+Basics:
+
+- Program begins paused, variables read in (and converted to program units) are displayed before beginning
+  so you can read them and double-check they are at desired values. Keys are listed below, but press 'r' to
+  unpause and begin simulation, press 'q' to quit.
+- NOTE: if you wish to record videos (using 'm' for start, 'M' for stop), you must have FFMPEG library installed.
+  Otherwise, when you attempt to record, the program will simply crash.
+
+Following is the keys and their corresponding action:
+	
+	'q' - (quit) - exit the application
+	'r' - is a toggle for run/pause
+	'x' - translates to the left
+	'X' - translates to the right
+	'y' - translates down
+	'Y' - translates up
+	'z' - translates away from the viewer
+	'Z' - translates towards the viewer
+	't' - toggles a tracer on/off (shows the lines of paths of the particles, they are simply not erased each time step)
+	'a' - toggle to turn viewing aids on/off (Debye Length marker, top/bottom boundaries)
+	'g' - toggle dust pair viewing on/off (a line drawn between dust grains and their companions)
+	'f' - toggle dust freezing on/off (see Dust Grain Selection below for more information)
+	
+	'm' - start recording the simulation window.
+	'M' - stop recording the simulation window.
+	's' - takes a screenshot of the simulation.
+	
+	'I' - increase BaseIonWakeFractionalCharge
+	'i' - decrease BaseIonWakeFractionalCharge
+	'V' - increase the power on the lower plate
+	'v' - decrease the power on the lower plate
+	'C' - increase the power on the side cavity
+	'c' - decrease the power on the side cavity
+	'P' - increase gas pressure in milliTorr
+	'p' - decrease gas pressure in milliTorr
+	
+	'h' - print out the help menu to the console.
+
+Explanation of BaseIonWakeFractionalCharge: This variable stores, for each dust, what fraction of the dust's charge the point
+charge should get (absolute value-wise). 
+
+Additional options exist in a right-click menu. The option labels with their functionality is listed below:
+
+Select One Dust Grain (l)    	Alternative to pressing 'l' on keyboard. Functionality is described below.
+Select Two Dust Grains (L)		Alternative to pressing 'L' on keyboard. Functionality described below.
+Start Movie (m)            		Begins recording movie (if one is not in progress). You must have the ffmpeg 
+								library installed.
+Stop Movie  (M)            		Stops recording movie (if one is in progress). You must have the ffmpeg library
+								installed.
+Take Screenshot (s)        		Takes a screenshot of the simulation. The image will be saved as Screenshot.jpeg.
+								Also requires ffmpeg.
+Help (h)						Prints out this help menu (shortcut to pressing 'h').
+
+-------------------------------------- Dust Grain Selection ------------------------------------------------------
+
+	For typical dust manipulation, only on dust grain can be selected. There is a two dust selection mode, but it is
+	made for raising one dust below and another above the crystal plane, for observing what happens and seeing if 
+	torsions occur.
+	With one dust selection, the previous dust grain selected will be stored.
+	To select 1 dust grain, press 'l' or right click and choose 'Select One Dust Grain'. This takes you into an 
+	orthographic top view, and you can use your mouse and click on a dust grain you wish to mess with. The
+	previously selected dust grain (if there is one) will be colored pink. The current dust grain is always blue.
+
+	Two dust selection ('L' or the right click menu option) will allow you to lower the mass of one dust grain and
+	increase the mass of another dust grain, effectively raising one dust grain above the plane while lowering another 
+	dust grain below the plane.
+	
+	Note:
+	The idea of this selection model is to allow comparison of two dust grains. You can freeze dust movement, and move
+	individual dust grains up and down, allowing them to pair to observe their interactions. By freezing them, the dust
+	forces won't be applied, so dust grains are still bodies, while the point charges still adjust.
+
+	To turn on dust movement xyz (rather than camera movement), press 1. Press shift+1 (!) to go back to camera xyz
+	movement. If dust is not frozen, it will try to float back down because the plate is pulling it down. To freeze the
+	dust, press 'F'. Press 'f' to unfreeze dust movement (if you want to allow any moved dust to float back down). This
+	can allow, for example, observations of ion wake adjustments.
+	
+
