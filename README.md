@@ -14,7 +14,6 @@
 - [Contributing Authors](#contributing-authors)
 - [Funding Sources](#funding-sources)
 - [Acknowledgements](#acknowledgements)
-- [References](#references)
 
 <a id="selected-pics"></a>  
 ## Selected Pics
@@ -139,11 +138,6 @@ Program.
 ## Acknowledgements
 We would like to thank Tarleton State University’s Mathematics Department for use of
 their High-Performance Computing lab for the duration of this project.
-
-<a id="references"></a>
-## References
-  
-	[1] In progress
       
 
 The Particle Modeling Group reserves the right to change this policy at any time.
