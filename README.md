@@ -22,8 +22,8 @@
 <img src="ReadMeImages/TopView1.jpeg" width=45% height=45% class='center'></img>
 <img src="ReadMeImages/TopView2.jpeg" width=45% height=45% class='center'></img>
 ### Side View
-<img src="ReadMeImages/SideView1.jpeg" width=30% height=30% class='center'></img>
-<img src="ReadMeImages/SideView2.jpeg" width=30% height=30% class='center'></img>
+<img src="ReadMeImages/SideView1.jpeg" width=45% height=45% class='center'></img>
+<img src="ReadMeImages/SideView2.jpeg" width=45% height=45% class='center'></img>
 
 <a id="project-aims"></a>  
 ## Project Aims
