@@ -90,6 +90,11 @@ Video8 Crystal and Torsion Forming: 	https://youtu.be/462vpwLTDKI
   Navigate to the cloned folder and run the following command to build and compile the simulation:
 
     ./compile
+    
+    If it gives you a Permission error type
+    chmod 777 ./compile
+    then type
+    ./compile
 
 ### Running
   After compiling, run the simulation:
