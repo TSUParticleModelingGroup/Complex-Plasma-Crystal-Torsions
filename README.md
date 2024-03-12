@@ -19,10 +19,11 @@
 <a id="selected-pics"></a>  
 ## Selected Pics
 ### Top View
-<img src="ReadMeImages/TopView.jpeg" width=30% height=30% class='center'></img>
-
+<img src="ReadMeImages/TopView1.jpeg" width=30% height=30% class='center'></img>
+<img src="ReadMeImages/TopView2.jpeg" width=30% height=30% class='center'></img>
 ### Side View
-<img src="ReadMeImages/SideView.jpeg" width=30% height=30% class='center'></img>
+<img src="ReadMeImages/SideView1.jpeg" width=30% height=30% class='center'></img>
+<img src="ReadMeImages/SideView2.jpeg" width=30% height=30% class='center'></img>
 
 <a id="project-aims"></a>  
 ## Project Aims
