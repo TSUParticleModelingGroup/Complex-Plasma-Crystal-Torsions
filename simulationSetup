@@ -63,11 +63,11 @@ BaseIonWakeLength = 109.0;
 * Its units will be grams*meters*seconds^-2*coulomb^-1. Double (1368.75 is a good value)
 RadialConfinementStrength = 1368.75;
 
-* Radius of cavity in centimeters. Double  0.6 good value
+* Radius of Radial Confinement region in centimeters. Double  0.6 good value
 RadialConfinementScale = 0.6;
 
-* Hieght of cavity in centimeters. Double  1.2 good value
-HieghtOfCavity = 1.2;
+* Hieght of Radial Confinement region in centimeters. Double  1.2 good value
+RadialConfinementHeight = 1.2;
 
 * Bottom plate constant. Max force by bottom plate when the height of the dust is zero. Double 
 * (6.88e5, 2.8e6, 1.35e7 were in the email from Dr. M They match the sheath heights)      ****Think this is actually Newtons/Coulomb equals V/m....****
