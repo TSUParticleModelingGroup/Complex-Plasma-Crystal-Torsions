@@ -58,23 +58,28 @@ ChargeExchangeFraction = 0.8;
 * This is the ionWake distance behind the dust grain. double (Calvin said 109 microns)  90 is a pretty good value.
 BaseIonWakeLength = 109.0;
 
-* Cavity wall charge charge type force. This will be a number that radial pushes the particles towards the center.
+* Strength of the radial confinement force. This will be a number that radially pushes the particles towards the center.
 * It will be a linear force that is multiplied by the dust charge and the distance out from the center of the cavity.
-* Its units will be grams*seconds^-2*coulomb^-1. Double (1.8e6)
-CavityCharge = 5.0e6;
+* Its units will be grams*meters*seconds^-2*coulomb^-1. Double (1368.75 is a good value)
+RadialConfinementStrength = 1368.75;
 
 * Radius of cavity in centimeters. Double  0.6 good value
-RadiusOfCavity = 0.6;
+RadialConfinementScale = 0.6;
 
 * Hieght of cavity in centimeters. Double  1.2 good value
 HieghtOfCavity = 1.2;
 
 * Bottom plate constant. Max force by bottom plate when the height of the dust is zero. Double 
 * (6.88e5, 2.8e6, 1.35e7 were in the email from Dr. M They match the sheath heights)      ****Think this is actually Newtons/Coulomb equals V/m....****
-* kg*m*s^-2*C^-1
-* 6.88e5 is a good value.
-* This is in kilograms*second^-2*coulomb-1   --- weird, typical values are in range of 1300-4000
-BottomPlateCharge = 6.88e5;
+* kg*s^-2*C^-1
+* This is in grams*second^-2*coulomb-1 (Double) good value 6.88e8
+BottomPlateForcingParameter = 6.88e8;
+
+* This should be in (m^2*kg)/(s^2*K). Double (1.3806493e-23 is a good number)
+BoltzmannConstant = 1.3806493e-23;
+
+* Diffuse reflection parameter for the Epstein gas drag coefficient. Double (1.44 is a good number)
+EpsteinConstant = 1.44;
 
 * This is the temperature of the neutral gas (argon in our case), in Kelvin.
 GasTemperature = 300;

@@ -45,6 +45,7 @@ double 	Gravity;
 double 	DustDensity;
 double 	BaseDustDiameter;
 double	DustDiameterStandardDeviation;
+int 	DustDistributionType;
 
 double 	CoulombConstant;
 double	ElectronCharge;
@@ -58,21 +59,16 @@ double 	BaseIonWakeFractionalCharge;
 double 	BaseIonWakeLength;
 double  ChargeExchangeFraction;
 
-double 	CavityCharge;
-double 	RadiusOfCavity;
-double 	HeightOfCavity;
-double 	BottomPlateCharge;
+double 	RadialConfinementStrength;
+double 	RadialConfinementScale;
+double 	RadialConfinementHeight;
+double 	BottomPlateForcingParameter;
 
-double  Pressure;
-double  PressureConstant;
+double  BoltzmannConstant;
+double  EpsteinConstant;
 double  GasTemperature;
 double  GasPressure;
 double  NeutralGasMass;
-double  BoltzmannConstant;
-
-// 0 means log normal
-// 1 means truncated normal distribution
-int DustDistributionType;
 
 double 	Dt;
 
@@ -81,6 +77,7 @@ int 	PrintTimeRate;
 
 // Drag will be calculated from above values.
 double 	Drag; 
+double  PressureConstant;
 
 // Globals to hold our unit convertions.
 double MassUnit;
@@ -94,7 +91,7 @@ int Trace;
 int MouseOn;
 int MovieOn;
 int View; // 0 top view, 1 side view.
-int ViewingAids;
+int RadialConfinementViewingAids;
 float4 CenterOfView;
 float4 AngleOfView;
 int DrawBottomRing;
@@ -103,7 +100,9 @@ int PreviouslySelectedGrain; // Holds the last selected grain
 int SingleOrPairOfDust;
 int Freeze; // 1 means we are frozen, 0 means not frozen (so moveDust is called)
 int SelectedDustMove; // 1 means xyz movement is on for selected dust, 0 means it is off.
-int ViewPairing; // 1 means means a line is drawn between parent dust and its companion (child). 0 means no line.
+// 1 means means a red/green line is drawn between parent dust and its companion (child). 
+// and a blue line is draw from a dust to its ion point charge. 0 means no lines are drawn.
+int DustViewingAids;
 
 // Timing globals
 int DrawTimer;
@@ -214,16 +213,22 @@ void readSimulationParameters()
 		data >> BaseIonWakeLength;
 		
 		getline(data,name,'=');
-		data >> CavityCharge;
+		data >> RadialConfinementStrength;
 		
 		getline(data,name,'=');
-		data >> RadiusOfCavity;
+		data >> RadialConfinementScale;
 		
 		getline(data,name,'=');
-		data >> HeightOfCavity;
+		data >> RadialConfinementHeight;
 		
 		getline(data,name,'=');
-		data >> BottomPlateCharge;
+		data >> BottomPlateForcingParameter;
+		
+		getline(data,name,'=');
+		data >> BoltzmannConstant;  
+		
+		getline(data,name,'=');
+		data >> EpsteinConstant;
 		
 		getline(data,name,'=');
 		data >> GasTemperature;
@@ -256,6 +261,7 @@ void readSimulationParameters()
 	printf("\n DustDensity.................................... %f grams/centimeter³", DustDensity);
 	printf("\n BaseDustDiameter............................... %f microns", BaseDustDiameter);
 	printf("\n DustDiameterStandardDeviation.................. %f microns", DustDiameterStandardDeviation);
+	printf("\n DustDistributionType........................... %d ", DustDistributionType);
 	printf("\n CoulombConstant................................ %e grams*meters³*second^-2*coulomb^-2", CoulombConstant);
 	printf("\n ElectronCharge................................. %e coulombs", ElectronCharge);
 	printf("\n BaseElectronsPerUnitDiameter................... %f electrons per micron", BaseElectronsPerUnitDiameter);
@@ -268,10 +274,10 @@ void readSimulationParameters()
 	printf("\n BaseIonWakeFractionalCharge.................... %f fraction of dust charge", BaseIonWakeFractionalCharge);
 	printf("\n ChargeExchangeFraction......................... %f fraction of charge transfer", ChargeExchangeFraction);
 	printf("\n BaseIonWakeLength.............................. %f microns", BaseIonWakeLength);
-	printf("\n CavityCharge................................... %e ???", CavityCharge);
-	printf("\n RadiusOfCavity................................. %f centimeters", RadiusOfCavity);
-	printf("\n HeightOfCavity................................. %f centimeters", HeightOfCavity);
-	printf("\n BottomPlateCharge.............................. %e kilograms*second-2*coulomb-1", BottomPlateCharge);
+	printf("\n RadialConfinementStrength...................... %e grams·meters·secondE-2CoulombE-1", RadialConfinementStrength);
+	printf("\n RadialConfinementScale......................... %f centimeters", RadialConfinementScale);
+	printf("\n RadialConfinementHeight........................ %f centimeters", RadialConfinementHeight);
+	printf("\n BottomPlateForcingParameter.................... %e grams*secondE-2*CoulombE-1", BottomPlateForcingParameter);
 	printf("\n Drag........................................... %e ???", Drag);
 	printf("\n Dt = %f number of divisions of the final time unit.", Dt);
 	printf("\n DrawRate = %d Dts between picture draws", DrawRate);
@@ -339,16 +345,16 @@ void setUnitConvertions()
 	/*
 	Length:
 	Because the most important distance is the distance between two adjacent dust particles at equalibrium we will let that be our distance unit.
-	To get started let assume we are working with a RadiusOfCavity cm radius well and a NumberOfDustParticles dust particles.
-	For simplicity lets put an evenly spaced square latice in a RadiusOfCavity circle. 
-	The sides would be 2*RadiusOfCavity/(2^(1/2)) cm long.
+	To get started let assume we are working with a RadialConfinementScale cm radius well and a NumberOfDustParticles dust particles.
+	For simplicity lets put an evenly spaced square latice in a RadialConfinementScale circle. 
+	The sides would be 2*RadialConfinementScale/(2^(1/2)) cm long.
 	The number of dust particle in each row would be NumberOfDustParticles^(1/2).
 	The number of spacing in each row would be NumberOfDustParticles^(1/2) - 1.
-	Hense the length of each spacing would be RadiusOfCavity*(2^(1/2))/(NumberOfDustParticles^(1/2) - 1) centimeters.
+	Hense the length of each spacing would be RadialConfinementScale*(2^(1/2))/(NumberOfDustParticles^(1/2) - 1) centimeters.
 	Lets put this in meters.
-	So our length unit is RadiusOfCavity*(2^(1/2))/(NumberOfDustParticles^(1/2) - 1)/100 meters.
+	So our length unit is RadialConfinementScale*(2^(1/2))/(NumberOfDustParticles^(1/2) - 1)/100 meters.
 	*/
-	LengthUnit = ((2.0*RadiusOfCavity/sqrt(2.0))/(sqrt(NumberOfDustParticles) - 1.0))/100.0;
+	LengthUnit = ((2.0*RadialConfinementScale/sqrt(2.0))/(sqrt(NumberOfDustParticles) - 1.0))/100.0;
 	
 	/*
 	Charge:
@@ -429,34 +435,28 @@ void PutConstantsIntoOurUnits()
 	BaseIonWakeLength /= 1.0e6;
 	BaseIonWakeLength /= LengthUnit;
 	
-	// This is a force I multiple by the dust charge to push it (electrically) away from the cavity wall. It is given in grams*seconds^-2*coulomb^-1.
+	// This is a force we multiple by the dust charge to push it away from the confinement wall. It is given in grams*meters*seconds^-2*coulomb^-1.
 	// To get it into our unit you need to divide by the apropriate units.
-	CavityCharge = CavityCharge*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
+	RadialConfinementStrength = RadialConfinementStrength*TimeUnit*TimeUnit*ChargeUnit/(MassUnit*LengthUnit);
 	
-	// Taking cavity dimitions in cm to our units. First take them to meters then to our units.
-	RadiusOfCavity /= 100.0;
-	RadiusOfCavity /= LengthUnit;
-	HeightOfCavity /= 100.0;
-	HeightOfCavity /= LengthUnit;
+	// Taking RadialConfinement dimitions in cm to our units. First take them to meters then to our units.
+	RadialConfinementScale /= 100.0;
+	RadialConfinementScale /= LengthUnit;
+	RadialConfinementHeight /= 100.0;
+	RadialConfinementHeight /= LengthUnit;
 	
 	// This is the force that you multiply times the charge and distance from the bottom plate to get a force.
-	// It is given in kilograms*seconds^-2*coulomb^-1.
+	// It is given in grams*seconds^-2*coulomb^-1.
 	// To get it into our unit you need to divide by the apropriate units.
-	// First take kilograms to grams.
-	BottomPlateCharge = BottomPlateCharge*1.0e3;
-	BottomPlateCharge = BottomPlateCharge*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
+	BottomPlateForcingParameter = BottomPlateForcingParameter*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
 	
 
 	// TODO: Read this in as a variable from the setup file.
-	double delta = 1.44;
-
-	// TODO: Also read this in as a variable.
-	// this is in (m^2*kg)/(s^2*K)
-	double boltzmann = 1.3806493e-23;
-
-	// Then, convert Boltzmann's constant into our unit first.
+	// I do not think pressure is correct. Does EpsteinConstant need to be converted?
+	// Is Boltsmann's constant converted correctly???
+	// This does not look like the paper????????????
 	
-	PressureConstant = (4.0/3.0)*sqrt(8.0)*delta*(1.0/sqrt(boltzmann*1000))*sqrt(PI*NeutralGasMass/6.022e23)*(101325.0/760.0)*(1.0/sqrt(GasTemperature))*((LengthUnit*LengthUnit*TimeUnit)/MassUnit);
+	PressureConstant = (4.0/3.0)*sqrt(8.0)*EpsteinConstant*(1.0/sqrt(BoltzmannConstant*1000))*sqrt(PI*NeutralGasMass/6.022e23)*(101325.0/760.0)*(1.0/sqrt(GasTemperature))*((LengthUnit*LengthUnit*TimeUnit)/MassUnit);
 	
 	// This was what we had done.
 	Drag = PressureConstant * GasPressure;
@@ -474,7 +474,7 @@ void PutConstantsIntoOurUnits()
 	printf("\n BaseDustDiameter = %e", BaseDustDiameter);
 	printf("\n DustDiameterStandardDeviation = %e", DustDiameterStandardDeviation);
 	if (DustDistributionType == 0) printf("\n Using log normal distribution.");
-	else printf("\n Using chopped normal distribution.");
+	else printf("\n Using truncated normal distribution.");
 	printf("\n CoulombConstant = %e", CoulombConstant);
 	printf("\n ElectronCharge = %e", ElectronCharge);
 	printf("\n BaseElectronsPerUnitDiameter = %e", BaseElectronsPerUnitDiameter);
@@ -487,10 +487,10 @@ void PutConstantsIntoOurUnits()
 	printf("\n BaseIonWakeFractionalCharge = %e", BaseIonWakeFractionalCharge);
 	printf("\n ChargeExchangeFraction = %f fraction of charge transfer", ChargeExchangeFraction);
 	printf("\n BaseIonWakeLength = %e", BaseIonWakeLength);
-	printf("\n CavityCharge = %e", CavityCharge);
-	printf("\n RadiusOfCavity = %e", RadiusOfCavity);
-	printf("\n HeightOfCavity = %e", HeightOfCavity);
-	printf("\n BottomPlateCharge = %e", BottomPlateCharge);
+	printf("\n RadialConfinementStrength = %e", RadialConfinementStrength);
+	printf("\n RadialConfinementScale = %e", RadialConfinementScale);
+	printf("\n RadialConfinementHeight = %e", RadialConfinementHeight);
+	printf("\n BottomPlateForcingParameter = %e", BottomPlateForcingParameter);
 	printf("\n Drag = %e", Drag);
 	printf("\n Dt = %e", Dt);
 	printf("\n DrawRate = %d", DrawRate);
@@ -581,9 +581,6 @@ void setInitialConditions()
 				// from two uniformlly distributed random numbers.
 				randomNumber = cos(2.0*PI*temp2)*sqrt(-2 * log(temp1));
 				
-				// Use a log normal or truncated normal
-				DustDistributionType = 0;
-
 				// Log normal
 				if (DustDistributionType == 0)
 				{
@@ -606,20 +603,11 @@ void setInitialConditions()
 						test = 0;
 					}
 				}
-				
-				/*
-				diameter = BaseDustDiameter + DustDiameterStandardDeviation*randomNumber;
-				if(((BaseDustDiameter - 2.0*DustDiameterStandardDeviation) <= diameter) 
-						&& (diameter <= (BaseDustDiameter + 2.0*DustDiameterStandardDeviation))
-						&& 0.0 < BaseDustDiameter)
-				{
-					test = 1;
-				}
 				else
 				{
-					test = 0;
+				 	printf("\n Bad DustDistributionType: %d.  Should be 0 or 1. \n", DustDistributionType);
+    					exit(0);
 				}
-				*/
 			}
 		}
 		
@@ -664,9 +652,9 @@ void setInitialConditions()
 			// Get random number between -1 at 1.
 			DustPositionCPU[i].x = ((float)rand()/(float)RAND_MAX)*2.0 - 1.0;
 			DustPositionCPU[i].z = ((float)rand()/(float)RAND_MAX)*2.0 - 1.0;
-			// Setting it to have random radius from 0 to radius of the cavity.
+			// Setting it to have random radius from 0 to radius of the radius of RadialConfinementScale.
 			mag = sqrt(DustPositionCPU[i].x*DustPositionCPU[i].x + DustPositionCPU[i].z*DustPositionCPU[i].z);
-			radius = ((float)rand()/(float)RAND_MAX)*RadiusOfCavity;
+			radius = ((float)rand()/(float)RAND_MAX)*RadialConfinementScale;
 			if(0.0 < mag)
 			{
 				DustPositionCPU[i].x *= radius/mag;
@@ -677,7 +665,7 @@ void setInitialConditions()
 				DustPositionCPU[i].x = 0.0;
 				DustPositionCPU[i].z = 0.0;
 			}
-			DustPositionCPU[i].y = ((float)rand()/(float)RAND_MAX)*HeightOfCavity/10.0 + HeightOfCavity - HeightOfCavity/10.0;
+			DustPositionCPU[i].y = ((float)rand()/(float)RAND_MAX)*RadialConfinementHeight/10.0 + RadialConfinementHeight - RadialConfinementHeight/10.0;
 			test = 1;
 			
 			for(int j = 0; j < i; j++)
@@ -739,17 +727,18 @@ void drawPicture()
 		/*glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
 		glEnable(GL_LINE_SMOOTH);*/
 		
-		// Lines between Dust and IonWake
-		glLineWidth(1.0);
-		glColor3d(0.0,0.0,1.0);
-		glBegin(GL_LINES);
-			glVertex3f(DustPositionCPU[i].x, DustPositionCPU[i].y, DustPositionCPU[i].z);
-			glVertex3f(DustPositionCPU[i].x + IonWakeCPU[i].x, DustPositionCPU[i].y + IonWakeCPU[i].y, DustPositionCPU[i].z + IonWakeCPU[i].z);
-		glEnd();
-		
 		// This handles whether you want to draw lines between dust and companions.
-		if(ViewPairing)
+		if(DustViewingAids)
 		{
+			// Line between Dust and its IonWake
+			glLineWidth(1.0);
+			glColor3d(0.0,0.0,1.0);
+			glBegin(GL_LINES);
+				glVertex3f(DustPositionCPU[i].x, DustPositionCPU[i].y, DustPositionCPU[i].z);
+				glVertex3f(DustPositionCPU[i].x + IonWakeCPU[i].x, DustPositionCPU[i].y + IonWakeCPU[i].y, DustPositionCPU[i].z + IonWakeCPU[i].z);
+			glEnd();
+		
+			// This handles drawing lines between dust and children.
 			glLineWidth(0.75);
 			for (int j = 0; j < MAX_NUMBER_CHILDREN; j++)
 			{
@@ -771,20 +760,20 @@ void drawPicture()
 		}
 	}
 	
-	if(ViewingAids == 1)
+	if(RadialConfinementViewingAids == 1)
 	{
 		glLineWidth(1.0);
 		float divitions = 60.0;
 		float angle = 2.0*PI/divitions;
 		
-		// Drawing the top of cavity ring.
+		// Drawing the top of RadialConfinement ring.
 		for(int i = 0; i < divitions; i++)
 		{
 			if(i < divitions/2) glColor3d(1.0,0.0,0.0);
 			else glColor3d(0.0,0.0,1.0);
 			glBegin(GL_LINES);
-				glVertex3f(sin(angle*i)*RadiusOfCavity, HeightOfCavity, cos(angle*i)*RadiusOfCavity);
-				glVertex3f(sin(angle*(i+1))*RadiusOfCavity, HeightOfCavity, cos(angle*(i+1))*RadiusOfCavity);
+				glVertex3f(sin(angle*i)*RadialConfinementScale, RadialConfinementHeight, cos(angle*i)*RadialConfinementScale);
+				glVertex3f(sin(angle*(i+1))*RadialConfinementScale, RadialConfinementHeight, cos(angle*(i+1))*RadialConfinementScale);
 			glEnd();
 		}
 		
@@ -793,8 +782,8 @@ void drawPicture()
 		for(int i = 0; i < divitions; i++)
 		{
 			glBegin(GL_LINES);
-				glVertex3f(sin(angle*i)*RadiusOfCavity, SheathHeight, cos(angle*i)*RadiusOfCavity);
-				glVertex3f(sin(angle*(i+1))*RadiusOfCavity, SheathHeight, cos(angle*(i+1))*RadiusOfCavity);
+				glVertex3f(sin(angle*i)*RadialConfinementScale, SheathHeight, cos(angle*i)*RadialConfinementScale);
+				glVertex3f(sin(angle*(i+1))*RadialConfinementScale, SheathHeight, cos(angle*(i+1))*RadialConfinementScale);
 			glEnd();
 		}
 		
@@ -803,8 +792,8 @@ void drawPicture()
 		for(int i = 0; i < divitions; i++)
 		{
 			glBegin(GL_LINES);
-				glVertex3f(sin(angle*i)*RadiusOfCavity, 0.0, cos(angle*i)*RadiusOfCavity);
-				glVertex3f(sin(angle*(i+1))*RadiusOfCavity, 0.0, cos(angle*(i+1))*RadiusOfCavity);
+				glVertex3f(sin(angle*i)*RadialConfinementScale, 0.0, cos(angle*i)*RadialConfinementScale);
+				glVertex3f(sin(angle*(i+1))*RadialConfinementScale, 0.0, cos(angle*(i+1))*RadialConfinementScale);
 			glEnd();
 		}
 			
@@ -1080,8 +1069,8 @@ __global__ void adjustPointCharge(float4 *dustPos, float cutOff, float4 *ionWake
 
 // This is the main n-body kernel. Its job is to calculate and sum all of the forces for each dust grain in each direction.
 __global__ void getForces(float4 *dustPos, float4 *dustForce, float4 *ionWake, float baseDustDiameter, 
-						float coulombConstant, float ionDebyeLength, float radiusOfCavity, float cavityCharge, 
-						float heightOfCavity, float sheathHeight, float bottomPlateCharge, float gravity, int numberOfParticles)
+		          float coulombConstant, float ionDebyeLength, float radialConfinementScale, float radialConfinementStrength, 
+			  float sheathHeight, float bottomPlateForcingParameter, float gravity, int numberOfParticles)
 {
 	float force; 
 	float dx, dy, dz, d2, d;
@@ -1152,7 +1141,7 @@ __global__ void getForces(float4 *dustPos, float4 *dustForce, float4 *ionWake, f
 				}
 			}
 		}
-		// This flag indicates whether to calculate a force caused by our own ion wake.
+		// This flag indicates whether to calculate a force caused by your own ion wake.
 		// This causes a lot of problems when turned on---turn on at your own risk.
 		int useSelfPointCharge = 0;
 		if(useSelfPointCharge == 1)
@@ -1172,20 +1161,19 @@ __global__ void getForces(float4 *dustPos, float4 *dustForce, float4 *ionWake, f
 		}
 		
 		// Getting dust to bottom plate force.
-		// e field is BottomPlateCharge*(posMeY - sheathHeight). 
+		// e field is bottomPlateForcingParameter*(posMeY - sheathHeight). 
 		// This is the linear force that starts at the sheath. We got this from Dr. Mathews.
 		if(posMeY < sheathHeight)
 		{
-			forceMeY += chargeMe*bottomPlateCharge*(posMeY - sheathHeight);
+			forceMeY += chargeMe*bottomPlateForcingParameter*(posMeY - sheathHeight);
 		}
 		
-		// Getting coulombic push back from the cavity. Height is irrelevant.
+		// Getting push back from the radial Confinement region. Height is irrelevant.
 		d  = sqrt(posMeX*posMeX + posMeZ*posMeZ);// + EPSILON;
 		// If it is zero nothing needs to be done.
 		if(d != 0.0) 
 		{
-			// We are assuming a 1/Length constant in front to make this a force. ??????????????????????????????????????
-			force = chargeMe*cavityCharge*pow(d/radiusOfCavity,12.0);
+			force = chargeMe*radialConfinementStrength*pow(d/radialConfinementScale,12.0);
 			forceMeX += force*posMeX/d;
 			forceMeZ += force*posMeZ/d;
 		}
@@ -1318,7 +1306,7 @@ void n_body()
 			errorCheck("cudaMemcpy DustUsedCountGPU up");
 		}
 
-		getForces<<<Grid, Block>>>(DustPositionGPU, DustForceGPU, IonWakeGPU, BaseDustDiameter, CoulombConstant, IonDebyeLength, RadiusOfCavity, CavityCharge, HeightOfCavity, SheathHeight, BottomPlateCharge, Gravity, NumberOfDustParticles);
+		getForces<<<Grid, Block>>>(DustPositionGPU, DustForceGPU, IonWakeGPU, BaseDustDiameter, CoulombConstant, IonDebyeLength, RadialConfinementScale, RadialConfinementStrength, SheathHeight, BottomPlateForcingParameter, Gravity, NumberOfDustParticles);
 		cudaDeviceSynchronize();
 
 		if(Freeze == 0)
@@ -1357,7 +1345,7 @@ void n_body()
 	else
 	{
 		// This looks wierd but I had to do it so I could work on the view while it is paused. 
-		// Consequest of the idle callback calling n_body().
+		// Consequence of the idle callback calling n_body().
 		// drawPicture(); 
 	}
 }
@@ -1378,9 +1366,9 @@ void terminalPrint()
 	printf(" (m/M) MovieStart/MovieStop\n");
 	printf(" (s)   Takes a screen shot of the simulation\n");
 	printf("\n");
-	printf(" (V/v) Bottom plate charge: %f\n", BottomPlateCharge);
-	printf(" (C/c) Cavity charge: %f\n", CavityCharge);
-	printf(" (P/p) Pressure in millitorr: %f\n", GasPressure);
+	printf(" (V/v) Bottom plate Forcing Parameter: %e\n", BottomPlateForcingParameter*(MassUnit)/(TimeUnit*TimeUnit*ChargeUnit));
+	printf(" (C/c) Radial Confinement Strength: %e\n", RadialConfinementStrength*(MassUnit*LengthUnit)/(TimeUnit*TimeUnit*ChargeUnit));
+	printf(" (P/p) Gas Pressure in millitorr: %e\n", GasPressure);
 	printf(" (I/i) BaseIonWakeFractionalCharge: %f\n", BaseIonWakeFractionalCharge);
 	printf("\n");
 	printf(" (1/!) On/off x/y/z movement for selected dust grain.");
@@ -1439,26 +1427,26 @@ void terminalPrint()
 	printf(" (Z/z) Move Out/In\n");
 	printf("\n");
 	
-	printf(" (f) Freeze on/off toggle.           ");
+	printf(" (f) Freeze on/off toggle.             ");
 	if (Freeze == 1) printf(" (Dust movement is OFF.)\n");
 	else printf(" (Dust movement is ON.)\n");
 	
-	printf(" (r) Run/Pause toggle.               ");
+	printf(" (r) Run/Pause toggle.                 ");
 	if(Pause == 1) printf(" (The simulation is paused.)\n");
 	else printf(" (The simulation is running.)\n");
 	
-	printf(" (t) Trace on/off toggle.            ");
+	printf(" (t) Trace on/off toggle.              ");
 	if(Trace == 1) printf(" (Tracing is ON.)\n");
 	else printf(" (Tracing is OFF.)\n");
 	
-	printf(" (a) Viewing aids on/off toggle.     ");
-	if(ViewingAids == 1) printf(" (Viewing aids are ON.)\n");
-	else printf(" (Viewing aids are OFF.)\n");
+	printf(" (a) RC viewing aids on/off toggle.    ");
+	if(RadialConfinementViewingAids == 1) printf(" (RC Viewing aids are ON.)\n");
+	else printf(" (RC Viewing aids are OFF.)\n");
 	
-	printf(" (g) Viewing pairing on/off toggle.  ");
-	if (ViewPairing == 0) printf(" (View pairing OFF)\n\n"); 
-	else if (ViewPairing == 1)	printf(" (View pairing is ON)\n\n");
-	else printf("ViewPairing = %d\n", ViewPairing);
+	printf(" (g) Dust Viewing aids on/off toggle.  ");
+	if (DustViewingAids == 0) printf(" (Dust Viewing aids OFF)\n\n"); 
+	else if (DustViewingAids == 1)	printf(" (Dust Viewing aids are ON)\n\n");
+	else printf("DustViewingAids = %d\n", DustViewingAids);
 
 	printf(" (9) Frustrum view\n");
 	printf(" (0) Ortho View\n");
@@ -1498,13 +1486,13 @@ void setup()
 	View = 1;
 	DrawBottomRing = 1;
 	MouseOn = 0;
-	ViewingAids = 1;
+	RadialConfinementViewingAids = 1;
 	SingleOrPairOfDust = 0;
 	Freeze = 0; // start unfrozen.
 	SelectedDustMove = 0;
 	SelectedDustGrainId1 = -1;
 	PreviouslySelectedGrain = -1;
-	ViewPairing = 1; // On by default.
+	DustViewingAids = 1; // On by default.
 	
 	printf("\nThe simulation is paused. Press the r key to start.\n");
 }
@@ -1571,20 +1559,20 @@ int main(int argc, char** argv)
 
 	// Clip plains
 	Near = 0.2;
-	Far = 80.0*RadiusOfCavity;
+	Far = 80.0*RadialConfinementScale;
 
 	//Direction where your eye is located
-	EyeX = 0.0*RadiusOfCavity;
-	EyeY = 0.5*HeightOfCavity;
-	EyeZ = 3.0*RadiusOfCavity;
+	EyeX = 0.0*RadialConfinementScale;
+	EyeY = 0.5*RadialConfinementHeight;
+	EyeZ = 3.0*RadialConfinementScale;
 	
-	//EyeX = 0.01*RadiusOfCavity;
-	//EyeY = HeightOfCavity;
-	//EyeZ = 0.0*RadiusOfCavity;
+	//EyeX = 0.01*RadialConfinementScale;
+	//EyeY = RadialConfinementHeight;
+	//EyeZ = 0.0*RadialConfinementScale;
 
 	//Where you are looking
 	CenterX = 0.0;
-	CenterY = 0.5*HeightOfCavity;
+	CenterY = 0.5*RadialConfinementHeight;
 	CenterZ = 0.0;
 	
 	//Keeoing track of where your center is as you move your view

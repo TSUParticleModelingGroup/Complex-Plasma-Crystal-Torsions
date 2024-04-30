@@ -26,7 +26,7 @@ void orthogonalView()
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(-RadiusOfCavity, RadiusOfCavity, -RadiusOfCavity, RadiusOfCavity, Near, Far);
+	glOrtho(-RadialConfinementScale, RadialConfinementScale, -RadialConfinementScale, RadialConfinementScale, Near, Far);
 	glMatrixMode(GL_MODELVIEW);
 	drawPicture();
 }
@@ -35,7 +35,7 @@ void topView()
 {
 	glLoadIdentity();
 	glTranslatef(0.0, -CenterY, 0.0);
-	glTranslatef(0.0, 0.0, -RadiusOfCavity);
+	glTranslatef(0.0, 0.0, -RadialConfinementScale);
 	glTranslatef(CenterOfView.x, CenterOfView.y, CenterOfView.z);
 	glRotatef(90.0, 1.0, 0.0, 0.0);
 	glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
@@ -46,7 +46,7 @@ void sideView()
 {
 	glLoadIdentity();
 	glTranslatef(0.0, -CenterY, 0.0);
-	glTranslatef(0.0, 0.0, -RadiusOfCavity);
+	glTranslatef(0.0, 0.0, -RadialConfinementScale);
 	drawPicture();
 }
 
@@ -134,15 +134,15 @@ void KeyPressed(unsigned char key, int x, int y)
 	}
 	if(key == 'a')
 	{
-		if(ViewingAids == 1) ViewingAids = 0;
-		else ViewingAids = 1;
+		if(RadialConfinementViewingAids == 1) RadialConfinementViewingAids = 0;
+		else RadialConfinementViewingAids = 1;
 		drawPicture();
 		terminalPrint();
 	}
 	if (key == 'g')
 	{
-		if (ViewPairing == 0) ViewPairing = 1;
-		else ViewPairing = 0;
+		if (DustViewingAids == 0) DustViewingAids = 1;
+		else DustViewingAids = 0;
 		terminalPrint();
 	}
 	
@@ -328,38 +328,38 @@ void KeyPressed(unsigned char key, int x, int y)
 	}
 	
 	// Adjusting power on lower plate
-	double deltaPowerBottomPlate = 1.0e7;
+	double deltaBottomPlateForcingParameter = 1.0e7;
 	if(key == 'V')
 	{
-		deltaPowerBottomPlate = deltaPowerBottomPlate*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
-		BottomPlateCharge += deltaPowerBottomPlate;
-		//printf("\nBottomPlateCharge = %e", BottomPlateCharge/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
+		deltaBottomPlateForcingParameter = deltaBottomPlateForcingParameter*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
+		BottomPlateForcingParameter += deltaBottomPlateForcingParameter;
+		//printf("\nBottomPlateForcingParameter = %e", BottomPlateForcingParameter/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
 		terminalPrint();
 	}
 	if(key == 'v')
 	{
-		deltaPowerBottomPlate = deltaPowerBottomPlate*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
-		BottomPlateCharge -= deltaPowerBottomPlate;
-		if(BottomPlateCharge < 0.0) BottomPlateCharge = 0.0;
-		//printf("\nBottomPlateCharge = %e", BottomPlateCharge/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
+		deltaBottomPlateForcingParameter = deltaBottomPlateForcingParameter*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
+		BottomPlateForcingParameter -= deltaBottomPlateForcingParameter;
+		if(BottomPlateForcingParameter < 0.0) BottomPlateForcingParameter = 0.0;
+		//printf("\nBottomPlateForcingParameter = %e", BottomPlateForcingParameter/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
 		terminalPrint();
 	}
 	
 	// Adjusting power on side of cavity
-	double deltaCavityCharge = 1.0e5;
+	double deltaRadialConfinementStrength = 1.0e5;
 	if(key == 'C')
 	{
-		deltaCavityCharge = deltaCavityCharge*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
-		CavityCharge += deltaCavityCharge;
-		//printf("\nCavityCharge = %e", CavityCharge/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
+		deltaRadialConfinementStrength = deltaRadialConfinementStrength*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
+		RadialConfinementStrength += deltaRadialConfinementStrength;
+		//printf("\RadialConfinementStrength = %e", RadialConfinementStrength/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
 		terminalPrint();
 	}
 	if(key == 'c')
 	{
-		deltaCavityCharge = deltaCavityCharge*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
-		CavityCharge -= deltaCavityCharge;
-		if(CavityCharge < 0.0) CavityCharge = 0.0;
-		//printf("\nCavityCharge = %e", CavityCharge/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
+		deltaRadialConfinementStrength = deltaRadialConfinementStrength*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
+		RadialConfinementStrength -= deltaRadialConfinementStrength;
+		if(RadialConfinementStrength < 0.0) RadialConfinementStrength = 0.0;
+		//printf("\RadialConfinementStrength = %e", RadialConfinementStrength/(TimeUnit*TimeUnit*ChargeUnit/MassUnit));
 		terminalPrint();
 	}
 
@@ -753,13 +753,13 @@ void mymouse(int button, int state, int x, int y)
 			{
 				if(SingleOrPairOfDust == 1) // Just selecting 1 Dust
 				{
-					myX =  ( 2.0*x/XWindowSize - 1.0)*RadiusOfCavity;
-					myZ = -(-2.0*y/YWindowSize + 1.0)*RadiusOfCavity;
+					myX =  ( 2.0*x/XWindowSize - 1.0)*RadialConfinementScale;
+					myZ = -(-2.0*y/YWindowSize + 1.0)*RadialConfinementScale;
 					
 					// Flashing a big yellow ball where you selected.
 					glColor3d(1.0, 1.0, 0.0);
 						glPushMatrix();
-						glTranslatef(myX, HeightOfCavity/2.0, myZ);
+						glTranslatef(myX, RadialConfinementHeight/2.0, myZ);
 						glutSolidSphere(0.5,20,20);
 					glPopMatrix();
 					glutSwapBuffers();
@@ -823,13 +823,13 @@ void mymouse(int button, int state, int x, int y)
 				}
 				else if(SingleOrPairOfDust == 2)
 				{
-					myX =  ( 2.0*x/XWindowSize - 1.0)*RadiusOfCavity;
-					myZ = -(-2.0*y/YWindowSize + 1.0)*RadiusOfCavity;
+					myX =  ( 2.0*x/XWindowSize - 1.0)*RadialConfinementScale;
+					myZ = -(-2.0*y/YWindowSize + 1.0)*RadialConfinementScale;
 					
 					// Flashing a big yellow ball where you selected.
 					glColor3d(1.0, 1.0, 0.0);
 						glPushMatrix();
-						glTranslatef(myX, HeightOfCavity/2.0, myZ);
+						glTranslatef(myX, RadialConfinementHeight/2.0, myZ);
 						glutSolidSphere(0.5,20,20);
 					glPopMatrix();
 					glutSwapBuffers();
