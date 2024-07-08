@@ -16,18 +16,29 @@
 #include <random>
 using namespace std;
 
+#define BOLD_ON  "\e[1m"
+#define BOLD_OFF   "\e[m"
+
 #define PI 3.141592654
 #define BLOCK 256
-#define ONE_GRAIN 0
-#define TWO_GRAINS 1
-#define START_MOVIE 2
-#define STOP_MOVIE 3
-#define TAKE_SCREENSHOT 4
-#define HELP 5
-#define MAX_NUMBER_CHILDREN 10
+
+// Drop dowm menu
+#define SELECT_DUST 0
+#define XYZ_EYE_POSITION 1
+#define XYZ_DUST_POSITION 2
+#define XYZ_DUST_VELOCITY 3
+#define X_DUST_DIAMETER 4
+#define FRUSTRUM_VIEW 5
+#define ORTHOGANAL_VIEW 6
+#define TOP_VIEW 7
+#define SIDE_VIEW 8
+#define RUN_SIMULATION 9
+#define PAUSE_SIMULATION 10
+
 #define MAX_FRACTIONAL_ION_WAKE_CHARGE_GIVE 0.7f
 #define EPSILON 0.000001f;
 #define EPSILON2 1.0e-12f;
+#define MAX_NUMBER_CHILDREN 10
 
 struct dustParentChildStructure
 {
@@ -71,9 +82,7 @@ double  GasPressure;
 double  NeutralGasMass;
 
 double 	Dt;
-
 int 	DrawRate;
-int 	PrintTimeRate;
 
 // Drag will be calculated from above values.
 double 	Drag; 
@@ -88,25 +97,23 @@ double TimeUnit;
 // Call back globals
 int Pause;
 int Trace;
-int MouseOn;
+int DustSelectionOn;
 int MovieOn;
 int View; // 0 top view, 1 side view.
-int RadialConfinementViewingAids;
-float4 CenterOfView;
-float4 AngleOfView;
-int DrawBottomRing;
-int SelectedDustGrainId1, SelectedDustGrainId2, SelectedDustGrainId3;
-int PreviouslySelectedGrain; // Holds the last selected grain
-int SingleOrPairOfDust;
-int Freeze; // 1 means we are frozen, 0 means not frozen (so moveDust is called)
-int SelectedDustMove; // 1 means xyz movement is on for selected dust, 0 means it is off.
+int FrustrumOrthoganal;
 // 1 means means a red/green line is drawn between parent dust and its companion (child). 
 // and a blue line is draw from a dust to its ion point charge. 0 means no lines are drawn.
 int DustViewingAids;
+int RadialConfinementViewingAids;
+float4 CenterOfView;
+float4 AngleOfView;
+int SelectedDustGrainId;
+int PreviouslySelectedGrain; // Holds the last selected grain
+int Freeze; // 1 means we are frozen, 0 means not frozen (so moveDust is called)
+int XYZAdjustments; // 1 means xyz movement is on for selected dust, 0 means it is off.
 
 // Timing globals
 int DrawTimer;
-int PrintTimer;
 float RunTime;
 
 // Position, velocity, force and ionwake globals
@@ -244,9 +251,6 @@ void readSimulationParameters()
 		
 		getline(data,name,'=');
 		data >> DrawRate;
-		
-		getline(data,name,'=');
-		data >> PrintTimeRate;
 	}
 	else
 	{
@@ -281,7 +285,6 @@ void readSimulationParameters()
 	printf("\n Drag........................................... %e ???", Drag);
 	printf("\n Dt = %f number of divisions of the final time unit.", Dt);
 	printf("\n DrawRate = %d Dts between picture draws", DrawRate);
-	printf("\n PrintTimeRate = %d Dts between time prints to the screen", PrintTimeRate);
 	
 	data.close();
 	printf("\n\n ********************************************************************************");
@@ -464,7 +467,6 @@ void PutConstantsIntoOurUnits()
 	// CutOffMultiplier is just a multiplier so no adjustment is needed.
 	// Dt is a fraction of the time unit so no need to change
 	// DrawRate is just a number of step between drawing so no change needed.
-	// PrintTimeRate is just a number of step between Printing the time to the screen so no change needed.
 	
 	// Printing out just for a spot check
 	printf("\n These are what all the basic constants in our units for a spot check\n");
@@ -494,7 +496,6 @@ void PutConstantsIntoOurUnits()
 	printf("\n Drag = %e", Drag);
 	printf("\n Dt = %e", Dt);
 	printf("\n DrawRate = %d", DrawRate);
-	printf("\n PrintTimeRate = %d", PrintTimeRate);
 	
 	printf("\n\n ********************************************************************************");
 	printf("\n Constants have been put into our units.");
@@ -698,16 +699,17 @@ void setInitialConditions()
 
 void drawPicture()
 {
+	float dustSize;
 	if(Trace == 0)
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClear(GL_DEPTH_BUFFER_BIT);
 	}
 	
-	float dustSize = 0.1;
-	
 	for(int i = 0; i < NumberOfDustParticles; i++)
 	{
+		dustSize = DustVelocityCPU[i].w*2.0; // To draw the actual dust size remove the 2.0. This just makes them easier to see.
+		
 		// Dust
 		glColor3d(DustColor[i].x,DustColor[i].y,DustColor[i].z);
 		glPushMatrix();
@@ -767,10 +769,9 @@ void drawPicture()
 		float angle = 2.0*PI/divitions;
 		
 		// Drawing the top of RadialConfinement ring.
+		glColor3d(1.0,0.0,0.0);
 		for(int i = 0; i < divitions; i++)
 		{
-			if(i < divitions/2) glColor3d(1.0,0.0,0.0);
-			else glColor3d(0.0,0.0,1.0);
 			glBegin(GL_LINES);
 				glVertex3f(sin(angle*i)*RadialConfinementScale, RadialConfinementHeight, cos(angle*i)*RadialConfinementScale);
 				glVertex3f(sin(angle*(i+1))*RadialConfinementScale, RadialConfinementHeight, cos(angle*(i+1))*RadialConfinementScale);
@@ -798,7 +799,7 @@ void drawPicture()
 		}
 			
 		// Drawing a CutOffMultiplier*IonDebyeLength so we can get a prospective.
-		glColor3d(0.0,1.0,0.0);
+		glColor3d(0.0,1.0,1.0);
 		glBegin(GL_LINES);
 				glVertex3f(DustPositionCPU[0].x, DustPositionCPU[0].y, DustPositionCPU[0].z);
 				glVertex3f(DustPositionCPU[0].x + CutOffMultiplier*IonDebyeLength, DustPositionCPU[0].y, DustPositionCPU[0].z);
@@ -843,7 +844,7 @@ __global__ void groupDust(float4 *dustPos, float cutOff, float4 *ionWake, dustPa
 	ionWake[myId].x = 0.0;
 	ionWake[myId].y = -baseIonWakeLength;
 	ionWake[myId].z = 0.0;
-	// IonsWakes are positive and dust grains are negatively charged so you need the negative.
+	// IonWakes are positive and dust grains are negatively charged so you need the negative.
 	// Set the ionWake charge back to a fraction of its parent dust's charge.
 	ionWake[myId].w = baseIonWakeFractionalCharge*(-dustPos[myId].w);
 	
@@ -1030,8 +1031,16 @@ __global__ void adjustPointCharge(float4 *dustPos, float cutOff, float4 *ionWake
 		dh = sqrt(dx*dx + dz*dz);
 		
 		// The 1/4 dh on the end can be changed to make the effect stronger or weaker.
-		lx = (dx/dh) * (1.0f-quadraticReduction) * (dh/4.0f);
-		lz = (dz/dh) * (1.0f-quadraticReduction) * (dh/4.0f);
+		if(dh != 0.0f)
+		{
+			lx = (dx/dh) * (1.0f-quadraticReduction) * (dh/4.0f);
+			lz = (dz/dh) * (1.0f-quadraticReduction) * (dh/4.0f);
+		}
+		else
+		{
+			lx = 0.0f;
+			lz = 0.0f;
+		}
 
 		// These do not need an atomicAdd because the parent dust must have received all its
 		// inheritance, meaning it was already adjusted by its parent(s). So, we should be able
@@ -1047,7 +1056,6 @@ __global__ void adjustPointCharge(float4 *dustPos, float cutOff, float4 *ionWake
 	// Setting the parent dust's values.
 	ionWake[parentId].y = -ionWakeLength; // Minus sign because it is below the dust.
 	ionWake[parentId].w = ionWakeCharge;
-	
 	
 	float finalCharge = ionWake[parentId].w;
 	
@@ -1317,29 +1325,34 @@ void n_body()
 			cudaDeviceSynchronize();
 		}
 		
-				
+		/*		
 		cudaMemcpy( DustPositionCPU, DustPositionGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
 		errorCheck("cudaMemcpy DustPositionCPU down");
 		cudaMemcpy( IonWakeCPU, IonWakeGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
 		errorCheck("cudaMemcpy IonWakeCPU down");
 		cudaMemcpy( DustParentChildCPU, DustParentChildGPU, NumberOfDustParticles*sizeof(dustParentChildStructure), cudaMemcpyDeviceToHost);
 		errorCheck("cudaMemcpy DustParentChildCPU down");
+		*/
 		
 		DrawTimer++;
 		if(DrawTimer >= DrawRate) 
 		{
+			cudaMemcpy( DustPositionCPU, DustPositionGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
+			errorCheck("cudaMemcpy DustPositionCPU down");
+			cudaMemcpy( DustVelocityCPU, DustVelocityGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
+			errorCheck("cudaMemcpy DustPositionCPU down");
+			cudaMemcpy( DustForceCPU, DustForceGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
+			errorCheck("cudaMemcpy DustPositionCPU down");
+			cudaMemcpy( IonWakeCPU, IonWakeGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
+			errorCheck("cudaMemcpy IonWakeCPU down");
+			cudaMemcpy( DustParentChildCPU, DustParentChildGPU, NumberOfDustParticles*sizeof(dustParentChildStructure), cudaMemcpyDeviceToHost);
+			errorCheck("cudaMemcpy DustParentChildCPU down");
 
 			drawPicture();
+			terminalPrint();
 			DrawTimer = 0;
 		}
-
-		PrintTimer++;
-		if(PrintTimer >= PrintTimeRate) 
-		{
-			terminalPrint();
-			PrintTimer = 0;
-		}
-		
+	
 		RunTime += Dt;
 	}
 	else
@@ -1357,102 +1370,183 @@ void n_body()
 void terminalPrint()
 {
 	system("clear");
-	//printf("\033[0;34m"); // print in blue.
-	//printf("\033[0;33m"); // yellow
-	printf("\033[0m"); // back to white.
-	printf("\n DrawRate = %d\n", DrawRate);
+	
+	/*
+	default  \033[0m
+	Black:   \033[0;30m
+	Red:     \033[0;31m
+	Green:   \033[0;32m
+	Yellow:  \033[0;33m
+	Blue:    \033[0;34m
+	Magenta: \033[0;35m
+	Cyan:    \033[0;36m
+	White:   \033[0;37m
+	printf("\033[0;30mThis text is black.\033[0m\n");
+	*/
+		
+	printf("\033[0m");
 	printf(" (q)   Quits the simulation\n");
 	printf(" (h)   Help\n");
-	printf(" (m/M) MovieStart/MovieStop\n");
+	
+	printf("\033[0m");
+	printf(" (m)   Movie toggle:");
+	if (MovieOn == 1) 
+	{
+		printf(BOLD_ON" \033[0;32mRECORDING\n" BOLD_OFF);
+	}
+	else 
+	{
+		printf(BOLD_ON " \033[0;31mNOT RECORDING\n" BOLD_OFF);
+	}
+	
+	printf("\033[0m");
 	printf(" (s)   Takes a screen shot of the simulation\n");
 	printf("\n");
-	printf(" (V/v) Bottom plate Forcing Parameter: %e\n", BottomPlateForcingParameter*(MassUnit)/(TimeUnit*TimeUnit*ChargeUnit));
-	printf(" (C/c) Radial Confinement Strength: %e\n", RadialConfinementStrength*(MassUnit*LengthUnit)/(TimeUnit*TimeUnit*ChargeUnit));
-	printf(" (P/p) Gas Pressure in millitorr: %e\n", GasPressure);
-	printf(" (I/i) BaseIonWakeFractionalCharge: %f\n", BaseIonWakeFractionalCharge);
-	printf("\n");
-	printf(" (1/!) On/off x/y/z movement for selected dust grain.");
-	if (SelectedDustMove) printf(" (XYZ movement is ON.)\n\n");
-	else printf(" XYZ movement is OFF.\n\n");
-	if (PreviouslySelectedGrain != -1)	
-	{
-		printf(" Previously selected dust grain (pink) Id = %d, Child[0] = %d\n", PreviouslySelectedGrain, DustParentChildCPU[PreviouslySelectedGrain].childId[0]);
-		printf(" Dust position is: (%+2.10f, %+2.10f, %+2.10f), charge = %+2.10f\n", DustPositionCPU[PreviouslySelectedGrain].x, DustPositionCPU[PreviouslySelectedGrain].y, DustPositionCPU[PreviouslySelectedGrain].z, DustPositionCPU[PreviouslySelectedGrain].w);
-		printf(" IonWake position: (%+2.10f, %+2.10f, %+2.10f), charge = %+2.10f\n", IonWakeCPU[PreviouslySelectedGrain].x, IonWakeCPU[PreviouslySelectedGrain].y, IonWakeCPU[PreviouslySelectedGrain].z, IonWakeCPU[PreviouslySelectedGrain].w);
-		float ionWakeLengthMeX = IonWakeCPU[PreviouslySelectedGrain].x;
-		float ionWakeLengthMeY = IonWakeCPU[PreviouslySelectedGrain].y;
-		float ionWakeLengthMeZ = IonWakeCPU[PreviouslySelectedGrain].z;
-		float d2 = ionWakeLengthMeX*ionWakeLengthMeX + ionWakeLengthMeY*ionWakeLengthMeY + ionWakeLengthMeZ*ionWakeLengthMeZ;// + EPSILON2;
-		float d = sqrt(d2);
-		printf(" Dust is %+2.10f away from its ionwake, that squared is %+2.10f\n", d, d2);
-		float dh = sqrt(ionWakeLengthMeX*ionWakeLengthMeX + ionWakeLengthMeZ*ionWakeLengthMeZ);// + EPSILON;
-		printf("dx = %f, dz = %f, dh = %f\n", ionWakeLengthMeX, ionWakeLengthMeZ, dh);
-	}
-	printf("\n");
-	if (SelectedDustGrainId1 != -1)
-	{
-		printf(" Currently selected dust grain (blue) Id = %d, Child[0] = %d\n", SelectedDustGrainId1, DustParentChildCPU[SelectedDustGrainId1].childId[0]);
-		printf(" Dust position is: (%+2.10f, %+2.10f, %+2.10f), charge = %+2.10f\n", DustPositionCPU[SelectedDustGrainId1].x, DustPositionCPU[SelectedDustGrainId1].y, DustPositionCPU[SelectedDustGrainId1].z, DustPositionCPU[SelectedDustGrainId1].w);
-		printf(" IonWake position: (%+2.10f, %+2.10f, %+2.10f), charge = %+2.10f\n", IonWakeCPU[SelectedDustGrainId1].x, IonWakeCPU[SelectedDustGrainId1].y, IonWakeCPU[SelectedDustGrainId1].z, IonWakeCPU[SelectedDustGrainId1].w);
-		float ionWakeLengthMeX = IonWakeCPU[SelectedDustGrainId1].x;
-		float ionWakeLengthMeY = IonWakeCPU[SelectedDustGrainId1].y;
-		float ionWakeLengthMeZ = IonWakeCPU[SelectedDustGrainId1].z;
-		float ionWakeChargeMe = IonWakeCPU[SelectedDustGrainId1].w;
-		float d2 = ionWakeLengthMeX*ionWakeLengthMeX + ionWakeLengthMeY*ionWakeLengthMeY + ionWakeLengthMeZ*ionWakeLengthMeZ;// + EPSILON2;
-		float d = sqrt(d2);
-		printf(" Dust is %+2.10f away from its ionwake, that squared is %+2.10f\n", d2, d);
-		float dh = sqrt(ionWakeLengthMeX*ionWakeLengthMeX + ionWakeLengthMeZ*ionWakeLengthMeZ);// + EPSILON;
-		printf("dx = %f, dz = %f, dh = %f\n", ionWakeLengthMeX, ionWakeLengthMeZ, dh);
-			// In our units, Coulomb's constant is 1--therefore, it could be removed, however we leave it in for clarity. 
-			float forceX = (-CoulombConstant*DustPositionCPU[SelectedDustGrainId1].w*ionWakeChargeMe/d2)*(1.0f + d/IonDebyeLength)*exp(-d/IonDebyeLength)*ionWakeLengthMeX/d;
-			float forceY = (-CoulombConstant*DustPositionCPU[SelectedDustGrainId1].w*ionWakeChargeMe/d2)*(1.0f + d/IonDebyeLength)*exp(-d/IonDebyeLength)*ionWakeLengthMeY/d;
-			float forceZ = (-CoulombConstant*DustPositionCPU[SelectedDustGrainId1].w*ionWakeChargeMe/d2)*(1.0f + d/IonDebyeLength)*exp(-d/IonDebyeLength)*ionWakeLengthMeZ/d;
-			printf("Forces in x: %f, y:%f, z:%f", forceX, forceY, forceZ);
-	}
-	if (PreviouslySelectedGrain != -1 && SelectedDustGrainId1 != -1)
-	{
-		// Calculations are you - me, where you is previously selected dust and me is current selected dust.
-		float dx = DustPositionCPU[PreviouslySelectedGrain].x - DustPositionCPU[SelectedDustGrainId1].x;
-		float dy = DustPositionCPU[PreviouslySelectedGrain].y - DustPositionCPU[SelectedDustGrainId1].y;
-		float dz = DustPositionCPU[PreviouslySelectedGrain].z - DustPositionCPU[SelectedDustGrainId1].z;
-		float d2 = dx*dx + dy*dy + dz*dz;
-		float d = sqrt(d2);
-		printf("\nDistance between selected and previous dust = %f and cutoff = %f\n", d, CutOffMultiplier*IonDebyeLength);
-
-	}
 	
-	printf(" (w) Top view/Side view toggle\n");
-	printf(" (X/x) Move Right/Left\n");
-	printf(" (Y/y) Move Up/Down\n");
-	printf(" (Z/z) Move Out/In\n");
+	printf(" \033[0m(V/v: +/-) Bottom plate Forcing Parameter... \033[1;33m%e\n", BottomPlateForcingParameter*(MassUnit)/(TimeUnit*TimeUnit*ChargeUnit));
+	printf(" \033[0m(C/c: +/-) Radial Confinement Strength...... \033[1;33m%e\n", RadialConfinementStrength*(MassUnit*LengthUnit)/(TimeUnit*TimeUnit*ChargeUnit));
+	printf(" \033[0m(P/p: +/-) Gas Pressure in millitorr........ \033[1;33m%e\n", GasPressure);
+	printf(" \033[0m(I/i: +/-) BaseIonWakeFractionalCharge...... \033[1;33m%f\n", BaseIonWakeFractionalCharge);
+	printf(" \033[0m(D/d: +/-) Time steps between screen draws.. \033[1;33m%d\n", DrawRate);
 	printf("\n");
 	
-	printf(" (f) Freeze on/off toggle.             ");
-	if (Freeze == 1) printf(" (Dust movement is OFF.)\n");
-	else printf(" (Dust movement is ON.)\n");
+	printf("\033[0m");
+	if (SelectedDustGrainId != -1)
+	{
+		int Id = SelectedDustGrainId;
+		printf(" \033[0mSelected dust position (x,y,z) is..... \033[1;33m(%+3.10f, %+3.10f, %+3.10f)\n", DustPositionCPU[Id].x, DustPositionCPU[Id].y, DustPositionCPU[Id].z);
+		printf(" \033[0mSelected dust velocity (x,y,z) is..... \033[1;33m(%+3.10f, %+3.10f, %+3.10f)\n", DustVelocityCPU[Id].x, DustVelocityCPU[Id].y, DustVelocityCPU[Id].z);
+		printf(" \033[0mSelected dust charge, diameter, mass.. \033[1;33m(%+3.10f, %+3.10f, %+3.10f)\n", DustPositionCPU[Id].w, DustVelocityCPU[Id].w, DustForceCPU[Id].w);
+	}
+	else
+	{
+		printf(" No dust currently selected.\n");
+	}
+	printf("\n");
 	
+	printf("\033[0m");    // white
+	printf(" (w) Top view/Side view toggle:");
+	if (View == 1) 
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mTOP\n" BOLD_OFF);
+	}
+	else 
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mSIDE\n" BOLD_OFF);
+	}
+	
+	printf("\033[0m");    // white
+	printf(" (o) Frustrum view/Orthoganal view toggle:");
+	if (FrustrumOrthoganal == 1) 
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mFRUSTRUMD\n" BOLD_OFF);
+	}
+	else 
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mORTHOGANAL\n" BOLD_OFF);
+	}
+	
+	printf("\033[0m");
+	printf(" (!) Recenter your view.\n");
+	
+	printf("\n");
+	printf("\033[0m");
+	printf(" (e) Four way switch - XYZ adjustment\n Eye Position, Dust Position, Dust Velocity, X Dust Diameter:");
+	if (XYZAdjustments == 0) 
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mEYE POSITION \n" BOLD_OFF);
+	}
+	else if (XYZAdjustments == 1)
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mDUST POSITION\n" BOLD_OFF);
+	}
+	else if (XYZAdjustments == 2)
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mDUST VELOCITY\n" BOLD_OFF);
+	}
+	else if (XYZAdjustments == 3)
+	{
+		//printf("\033[0;36m"); // cyan
+		printf(BOLD_ON " \033[0;36mDUST DIAMETER\n" BOLD_OFF);
+	}
+	
+	printf("\033[0m");
+	//printf(" (w) Top view/Side view toggle\n");
+	printf(" (X/x) +/-\n");
+	printf(" (Y/y) +/-\n");
+	printf(" (Z/z) +/-\n");
+	printf("\n");
+	
+	printf("\033[0m");    // white
 	printf(" (r) Run/Pause toggle.                 ");
-	if(Pause == 1) printf(" (The simulation is paused.)\n");
-	else printf(" (The simulation is running.)\n");
+	printf(" The simulation is:");
+	if (Pause == 1) 
+	{
+		printf(BOLD_ON " \033[0;31mPAUSED\n" BOLD_OFF);
+	}
+	else 
+	{
+		printf(BOLD_ON " \033[0;32mRUNNING\n" BOLD_OFF);
+	}
 	
+	printf("\033[0m");
+	printf(" (f) Freeze on/off toggle.             ");
+	printf(" Dust freeze movement is:");
+	if (Freeze == 1) 
+	{
+		printf(BOLD_ON " \033[0;32mON\n" BOLD_OFF);
+	}
+	else 
+	{
+		printf(BOLD_ON " \033[0;31mOFF\n" BOLD_OFF);
+	}
+	
+	printf("\033[0m");
 	printf(" (t) Trace on/off toggle.              ");
-	if(Trace == 1) printf(" (Tracing is ON.)\n");
-	else printf(" (Tracing is OFF.)\n");
+	printf(" Tracing is:");
+	if (Trace == 1) 
+	{
+		printf(BOLD_ON " \033[0;32mON\n" BOLD_OFF);
+	}
+	else 
+	{
+		printf(BOLD_ON " \033[0;31mOFF\n" BOLD_OFF);
+	}
 	
+	printf("\033[0m");
 	printf(" (a) RC viewing aids on/off toggle.    ");
-	if(RadialConfinementViewingAids == 1) printf(" (RC Viewing aids are ON.)\n");
-	else printf(" (RC Viewing aids are OFF.)\n");
-	
-	printf(" (g) Dust Viewing aids on/off toggle.  ");
-	if (DustViewingAids == 0) printf(" (Dust Viewing aids OFF)\n\n"); 
-	else if (DustViewingAids == 1)	printf(" (Dust Viewing aids are ON)\n\n");
-	else printf("DustViewingAids = %d\n", DustViewingAids);
+	printf(" RC Viewing aids are:");
+	if (RadialConfinementViewingAids == 1) 
+	{
+		printf(BOLD_ON " \033[0;32mON\n" BOLD_OFF);
+	}
+	else 
+	{
+		printf(BOLD_ON " \033[0;31mOFF\n" BOLD_OFF);
+	}
 
-	printf(" (9) Frustrum view\n");
-	printf(" (0) Ortho View\n");
+	printf("\033[0m");
+	printf(" (g) Dust Viewing aids on/off toggle.  ");
+	printf(" Dust Viewing aids are:");
+	if (DustViewingAids == 1) 
+	{
+		printf(BOLD_ON " \033[0;32mON\n" BOLD_OFF);
+	}
+	else 
+	{
+		printf(BOLD_ON " \033[0;31mOFF\n" BOLD_OFF);
+	}
 	
 	printf("\n");
-	printf(" Total run time = %f seconds\n", RunTime*TimeUnit);
+	printf(" Total run time in seconds.. \033[1;33m%f\n", RunTime*TimeUnit);
+	printf("\033[0m"); 
 	printf("\n");
 	printf("\033[0m");
 }
@@ -1478,19 +1572,17 @@ void setup()
 	errorCheck("cudaMemcpy DustParentChildGPU up");
     
 	DrawTimer = 0;
-	PrintTimer = 0;
 	RunTime = 0.0;
 	Pause = 1;
 	MovieOn = 0;
 	Trace = 0;
-	View = 1;
-	DrawBottomRing = 1;
-	MouseOn = 0;
+	View = 0;
+	DustSelectionOn = 0;
 	RadialConfinementViewingAids = 1;
-	SingleOrPairOfDust = 0;
 	Freeze = 0; // start unfrozen.
-	SelectedDustMove = 0;
-	SelectedDustGrainId1 = -1;
+	FrustrumOrthoganal = 1;
+	XYZAdjustments = 0;
+	SelectedDustGrainId = -1;
 	PreviouslySelectedGrain = -1;
 	DustViewingAids = 1; // On by default.
 	
@@ -1517,35 +1609,86 @@ void createGLUTMenus() {
 	mainMenu = glutCreateMenu(processMainMenuEvents);
 	// attach the menu to the right button
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
-	glutAddMenuEntry("Select One Dust Grain", ONE_GRAIN);
-	glutAddMenuEntry("Select Two Dust Grains", TWO_GRAINS);
-	glutAddMenuEntry("Start Movie", START_MOVIE);
-	glutAddMenuEntry("Stop Movie", STOP_MOVIE);
-	glutAddMenuEntry("Take Screenshot", TAKE_SCREENSHOT);
-	glutAddMenuEntry("Help", HELP);
+	glutAddMenuEntry("Select a Dust Grain", SELECT_DUST);
+	glutAddMenuEntry("XYZ Eye Position", XYZ_EYE_POSITION);
+	glutAddMenuEntry("XYZ Dust Position", XYZ_DUST_POSITION);
+	glutAddMenuEntry("XYZ Dust Velocity", XYZ_DUST_VELOCITY);
+	glutAddMenuEntry("X Dust Diameter", X_DUST_DIAMETER);
+	glutAddMenuEntry("Frustrum View", FRUSTRUM_VIEW);
+	glutAddMenuEntry("Orthoganal View", ORTHOGANAL_VIEW);
+	glutAddMenuEntry("Top View", TOP_VIEW);
+	glutAddMenuEntry("Side View", SIDE_VIEW);
+	glutAddMenuEntry("Run Simulation", RUN_SIMULATION);
+	glutAddMenuEntry("Pause Simulation", PAUSE_SIMULATION);
 }
 
 void processMainMenuEvents(int option) 
 {
 	switch (option) 
 	{
-		case ONE_GRAIN:
-			KeyPressed('l', 0, 0);
+		case SELECT_DUST:
+			View = 1;
+			topView();
+			orthogonalView();
+			DustSelectionOn = 1;
+			Pause = 1;
+			DustViewingAids = 0;
+			RadialConfinementViewingAids = 0;
+			drawPicture();
 			break;
-		case TWO_GRAINS:
-			KeyPressed('L', 0, 0);
+		case XYZ_EYE_POSITION:
+			XYZAdjustments = 0;
+			terminalPrint();
+			drawPicture();
 			break;
-		case START_MOVIE:
-			KeyPressed('m', 0, 0);
+		case XYZ_DUST_POSITION:
+			XYZAdjustments = 1;
+			terminalPrint();
+			drawPicture();
 			break;
-		case STOP_MOVIE:
-			KeyPressed('M', 0, 0);
+		case XYZ_DUST_VELOCITY:
+			XYZAdjustments = 2;
+			terminalPrint();
+			drawPicture();
 			break;
-		case TAKE_SCREENSHOT:
-			KeyPressed('s', 0, 0);
+		case X_DUST_DIAMETER:
+			XYZAdjustments = 3;
+			terminalPrint();
+			drawPicture();
 			break;
-		case HELP:
-			KeyPressed('h', 0, 0);
+		case FRUSTRUM_VIEW:
+			FrustrumOrthoganal = 1;
+			frustrumView();
+			terminalPrint();
+			drawPicture();
+			break;
+		case ORTHOGANAL_VIEW:
+			FrustrumOrthoganal = 0;
+			orthogonalView();
+			terminalPrint();
+			drawPicture();
+			break;
+		case TOP_VIEW:
+			View = 1;
+			topView();
+			terminalPrint();
+			drawPicture();
+			break;
+		case SIDE_VIEW:
+			View = 0;
+			sideView();
+			terminalPrint();
+			drawPicture();
+			break;
+		case RUN_SIMULATION:
+			Pause = 0;
+			terminalPrint();
+			drawPicture();
+			break;
+		case PAUSE_SIMULATION:
+			Pause = 1;
+			terminalPrint();
+			drawPicture();
 			break;
 	}
 }

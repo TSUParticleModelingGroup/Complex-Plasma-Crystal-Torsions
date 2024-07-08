@@ -1,4 +1,4 @@
-#Installs all dependencies for svt code
+#Installs all dependencies for the code
 sudo apt install git -y
 sudo apt install mesa-utils -y
 sudo apt install freeglut3-dev -y

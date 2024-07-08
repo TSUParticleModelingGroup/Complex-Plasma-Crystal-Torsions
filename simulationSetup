@@ -19,7 +19,7 @@ DustDensity = 1.51;
 BaseDustDiameter = 8.89;
 
 * Dust diameter flucuation Standard Deviation in microns. double (0.09 is the advertised standard StD)
-DustDiameterStandardDeviation = 0.02;
+DustDiameterStandardDeviation = 0.01;
 
 * Type of distribution to use for dust. Possible values are 0 or 1.
 * 0 indicates use a log normal. 1 indicates truncated normal. int
@@ -95,7 +95,4 @@ Dt = 0.005; Double
 
 * How many time steps go by between sending pictures to the screen. 20 is a decently smooth (but performant) value.
 DrawRate = 20; int
-
-* How many time steps go by between sending a time print to the terminal.
-PrintTimeRate = 1000; int
 
