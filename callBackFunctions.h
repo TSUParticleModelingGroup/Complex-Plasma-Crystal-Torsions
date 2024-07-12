@@ -47,6 +47,25 @@ void sideView()
 	glLoadIdentity();
 	glTranslatef(0.0, -CenterY, 0.0);
 	glTranslatef(0.0, 0.0, -RadialConfinementScale);
+	//glRotatef(-90.0, 1.0, 0.0, 0.0);
+	drawPicture();
+}
+
+void centeredTopView()
+{
+	//glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
+	//CenterOfView.x = 0.0;
+	//CenterOfView.y = 0.0;
+	//CenterOfView.z = 0.0;
+		
+	glLoadIdentity();
+	glTranslatef(0.0, -CenterY, 0.0);
+	glTranslatef(0.0, 0.0, -RadialConfinementScale);
+	CenterOfView.y = CenterY;
+	CenterOfView.z = CenterZ;
+	glTranslatef(CenterOfView.x, CenterOfView.y, CenterOfView.z);
+	glRotatef(90.0, 1.0, 0.0, 0.0);
+	glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
 	drawPicture();
 }
 
@@ -94,11 +113,51 @@ void KeyPressed(unsigned char key, int x, int y)
 	
 	if(key == '!')
 	{
+		//glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
+		//CenterOfView.x = 0.0;
+		//CenterOfView.y = 0.0;
+		//CenterOfView.z = 0.0;
+		
+		glLoadIdentity();
+		glTranslatef(0.0, -CenterY, 0.0);
+		glTranslatef(0.0, 0.0, -RadialConfinementScale);
+		CenterOfView.y = CenterY;
+		CenterOfView.z = CenterZ;
+		glTranslatef(CenterOfView.x, CenterOfView.y, CenterOfView.z);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
 		glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
-		CenterOfView.x = 0.0;
-		CenterOfView.y = 0.0;
-		CenterOfView.z = 0.0;
+		drawPicture();
 	}
+	
+	/*
+	void standardTopView()
+	{
+	      glLoadIdentity();
+	      glTranslatef(0.0, -CenterY, 0.0);
+	      glTranslatef(0.0, 0.0, -RadialConfinementScale);
+	      CenterOfView.y = CenterY;
+	      CenterOfView.z = CenterZ;
+	      glTranslatef(CenterOfView.x, CenterOfView.y, CenterOfView.z);
+	      glRotatef(90.0, 1.0, 0.0, 0.0);
+	      glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
+	      drawPicture();
+	}
+
+	void topView()
+	{
+	      // First set to side view.
+	      glLoadIdentity();
+	      glTranslatef(0.0, -CenterY, 0.0);
+	      glTranslatef(0.0, 0.0, -RadialConfinementScale);
+	      // Now move over
+	      glTranslatef(CenterOfView.x, CenterOfView.y, CenterOfView.z);
+	      // Rotate to look down.
+	      glRotatef(90.0, 1.0, 0.0, 0.0);
+	      // Move back
+	      glTranslatef(-CenterOfView.x, -CenterOfView.y, -CenterOfView.z);
+	      drawPicture();
+	}
+*/
 	
 	// This a magic key we used to place dust to make a movie
 	if(key == '2')
@@ -165,7 +224,7 @@ void KeyPressed(unsigned char key, int x, int y)
 		DustViewingAids = 1;
 		XYZAdjustments = 1;
 		BaseIonWakeFractionalCharge = 0.5;
-		SelectedDustGrainId = 2;
+		SelectedDustGrainId = 3;
 		
 		drawPicture();
 		terminalPrint();
@@ -214,7 +273,7 @@ void KeyPressed(unsigned char key, int x, int y)
 		DustViewingAids = 1;
 		XYZAdjustments = 1;
 		BaseIonWakeFractionalCharge = 0.5;
-		SelectedDustGrainId = 2;
+		SelectedDustGrainId = 4;
 		
 		drawPicture();
 		terminalPrint();
@@ -259,6 +318,14 @@ void KeyPressed(unsigned char key, int x, int y)
 			View = 0;
 			sideView();
 		}
+		drawPicture();
+		terminalPrint();
+	}
+	
+	if(key == '!')
+	{
+		View = 1;
+		centeredTopView();
 		drawPicture();
 		terminalPrint();
 	}
@@ -437,18 +504,18 @@ void KeyPressed(unsigned char key, int x, int y)
 	}
 	
 	// Adjusting pressure: P increases presure, p decreases presure
-	double deltaPressure = 1;
+	double deltaPressure = 10000.0;
 	if (key == 'P') // increase pressure
 	{
 		GasPressure += deltaPressure;
-		Drag = PressureConstant * GasPressure;
+		//Drag = PressureConstant * GasPressure;
 		terminalPrint();
 	}
 	if (key == 'p') // decrease pressure
 	{
 		GasPressure -= deltaPressure;
 		if (GasPressure < 0.0) GasPressure = 0.0;
-		Drag = PressureConstant * GasPressure;
+		//Drag = PressureConstant * GasPressure;
 		terminalPrint();
 	}
 	

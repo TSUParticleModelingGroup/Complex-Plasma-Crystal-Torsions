@@ -26,7 +26,7 @@ DustDiameterStandardDeviation = 0.01;
 DustDistributionType = 0;
 
 * Coulomb constant in g*m^3*s^-2*C^-2. double (8.987551792e12 standard number)
-CoulombConstant = 8.987551792e12;
+CoulombConstant = 8.9875517923e12;
 
 * This should be a negative number because electrons have a negative charge.
 * Charge of an electron in coulombs. double (-1.60217662e-19 standard number)
@@ -36,7 +36,7 @@ ElectronCharge = -1.60217662e-19;
 BaseElectronsPerUnitDiameter = 1000.0;
 
 * The standard deviation of electrons to added or subtracted each time step from a dust grain. Double (Not sure what this should be maybe 5 to 10)
-ElectronStdPerUnitDiameter = 2.0;
+ElectronStdPerUnitDiameter = 5.0;
 
 * Debye length in micro meters. double (45.0 is a good value)
 IonDebyeLength = 45.0;
@@ -75,8 +75,8 @@ RadialConfinementHeight = 1.2;
 * This is in grams*second^-2*coulomb-1 (Double) good value 6.88e8
 BottomPlateForcingParameter = 6.88e8;
 
-* This should be in (m^2*kg)/(s^2*K). Double (1.3806493e-23 is a good number)
-BoltzmannConstant = 1.3806493e-23;
+* This should be in (g*m^2)/(s^2*K). Double (1.380649e-20 is a good number)
+BoltzmannConstant = 1.380649e-20;
 
 * Diffuse reflection parameter for the Epstein gas drag coefficient. Double (1.44 is a good number)
 EpsteinConstant = 1.44;

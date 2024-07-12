@@ -34,6 +34,8 @@ using namespace std;
 #define SIDE_VIEW 8
 #define RUN_SIMULATION 9
 #define PAUSE_SIMULATION 10
+#define FREEZE_SIMULATION 11
+#define UNFREEZE_SIMULATION 12
 
 #define MAX_FRACTIONAL_ION_WAKE_CHARGE_GIVE 0.7f
 #define EPSILON 0.000001f;
@@ -85,7 +87,7 @@ double 	Dt;
 int 	DrawRate;
 
 // Drag will be calculated from above values.
-double 	Drag; 
+//double 	Drag; 
 double  PressureConstant;
 
 // Globals to hold our unit convertions.
@@ -259,19 +261,17 @@ void readSimulationParameters()
 	}
 	
 	// Printing out all the values read in for a spot check of the program.
-	printf("\n These are what all the basic constants that were read in for a spot check\n");
+	printf("\n These are the values that were read in from the simulation setup file\n");
 	printf("\n NumberOfDustParticles.......................... %d", NumberOfDustParticles);
-	printf("\n Gravity........................................ %f meters/second²", Gravity);
-	printf("\n DustDensity.................................... %f grams/centimeter³", DustDensity);
+	printf("\n Gravity........................................ %f meters/second^2", Gravity);
+	printf("\n DustDensity.................................... %f grams/centimeter^3", DustDensity);
 	printf("\n BaseDustDiameter............................... %f microns", BaseDustDiameter);
 	printf("\n DustDiameterStandardDeviation.................. %f microns", DustDiameterStandardDeviation);
 	printf("\n DustDistributionType........................... %d ", DustDistributionType);
-	printf("\n CoulombConstant................................ %e grams*meters³*second^-2*coulomb^-2", CoulombConstant);
+	printf("\n CoulombConstant................................ %e grams*meters^3*second^-2*coulomb^-2", CoulombConstant);
 	printf("\n ElectronCharge................................. %e coulombs", ElectronCharge);
 	printf("\n BaseElectronsPerUnitDiameter................... %f electrons per micron", BaseElectronsPerUnitDiameter);
-	printf("\n BaseElectronsPerUnitDiameter*BaseDustDiameter.. %f number of electrons on a standard dust grain.", BaseElectronsPerUnitDiameter*BaseDustDiameter);
 	printf("\n electronStdPerUnitDiameter..................... %f electron fluxuation per micron", electronStdPerUnitDiameter);
-	printf("\n electronStdPerUnitDiameter*BaseDiameter........ %f electron fluxuation on a standard dust grain", electronStdPerUnitDiameter*BaseDustDiameter);
 	printf("\n IonDebyeLength................................. %f microns", IonDebyeLength);
 	printf("\n CutOffMultiplier............................... %f", CutOffMultiplier);
 	printf("\n SheathHeight................................... %f microns", SheathHeight);
@@ -282,9 +282,16 @@ void readSimulationParameters()
 	printf("\n RadialConfinementScale......................... %f centimeters", RadialConfinementScale);
 	printf("\n RadialConfinementHeight........................ %f centimeters", RadialConfinementHeight);
 	printf("\n BottomPlateForcingParameter.................... %e grams*secondE-2*CoulombE-1", BottomPlateForcingParameter);
-	printf("\n Drag........................................... %e ???", Drag);
+	printf("\n BoltzmannConstant.............................. %e meter^2*grams*second^-2*Kelvin^-1", BoltzmannConstant);
+	printf("\n EpsteinConstant................................ %e Unitless", EpsteinConstant);
+	printf("\n GasTemperature................................. %e Kelvin", GasTemperature);
+	printf("\n GasPressure.................................... %e millitorr", GasPressure);
+	printf("\n NeutralGasMass................................. %e amu aka Dalton", NeutralGasMass);
 	printf("\n Dt = %f number of divisions of the final time unit.", Dt);
 	printf("\n DrawRate = %d Dts between picture draws", DrawRate);
+	
+	//printf("\n BaseElectronsPerUnitDiameter*BaseDustDiameter.. %f number of electrons on a standard dust grain.", BaseElectronsPerUnitDiameter*BaseDustDiameter);
+	//printf("\n electronStdPerUnitDiameter*BaseDiameter........ %f electron fluxuation on a standard dust grain", electronStdPerUnitDiameter*BaseDustDiameter);
 	
 	data.close();
 	printf("\n\n ********************************************************************************");
@@ -379,7 +386,7 @@ void setUnitConvertions()
 	
 	// To change a mass, length, charge or time from the run units into grams, meters, coulombs or seconds just multiple by the apropriate unit from here.
 	// To change a mass, length, charge or time from grams, meters, coulombs or seconds into our units just divide by the apropriate unit from here.
-	printf("\n This is what all of the convertions are for a spot check\n");
+	printf("\n This are the unit convertions constants.\n");
 	printf("\n Our MassUnit 	= %e grams", MassUnit);
 	printf("\n Our LengthUnit = %e meters", LengthUnit);
 	printf("\n Our ChargeUnit = %e coulombs", ChargeUnit);
@@ -395,7 +402,7 @@ void PutConstantsIntoOurUnits()
 {
 	// NumberOfDustParticles is just a number so no need to convert.
 	
-	// Gravity is in meters per secind square so in of units we need to multiplu by TimeUnit^2*LengthUnit^-1.
+	// Gravity is in meters per second square so in of units we need to multiplu by TimeUnit^2*LengthUnit^-1.
 	Gravity *= TimeUnit*TimeUnit/LengthUnit;
 	
 	// Dust density is in grams per cenimeter cubed so need to take this to meters then divive by (MassUnit/LengthUnit^2);
@@ -428,6 +435,9 @@ void PutConstantsIntoOurUnits()
 	IonDebyeLength /= 1.0e6;
 	IonDebyeLength /= LengthUnit;
 	
+	// CutOffMultiplier is just a multiplier so no adjustment is needed.
+	CutOffMultiplier = CutOffMultiplier;
+	
 	// Puting the sheath height into our units. It is in millimeters so take it to meters then to our units.
 	SheathHeight /= 1.0e3;
 	SheathHeight /= LengthUnit;
@@ -453,49 +463,67 @@ void PutConstantsIntoOurUnits()
 	// To get it into our unit you need to divide by the apropriate units.
 	BottomPlateForcingParameter = BottomPlateForcingParameter*TimeUnit*TimeUnit*ChargeUnit/MassUnit;
 	
-
-	// TODO: Read this in as a variable from the setup file.
-	// I do not think pressure is correct. Does EpsteinConstant need to be converted?
-	// Is Boltsmann's constant converted correctly???
-	// This does not look like the paper????????????
+	// We read Boltzmann's Constant constant in at meter^2*grams*seconds^-2*Kelvin^-1 
+	BoltzmannConstant /= LengthUnit*LengthUnit*MassUnit/(TimeUnit*TimeUnit); // This will be our units/Kelvin
 	
-	PressureConstant = (4.0/3.0)*sqrt(8.0)*EpsteinConstant*(1.0/sqrt(BoltzmannConstant*1000))*sqrt(PI*NeutralGasMass/6.022e23)*(101325.0/760.0)*(1.0/sqrt(GasTemperature))*((LengthUnit*LengthUnit*TimeUnit)/MassUnit);
+	// I believe Epstein's Constant is unitless so nothing to do here.
+	EpsteinConstant = EpsteinConstant; 
 	
-	// This was what we had done.
-	Drag = PressureConstant * GasPressure;
+	// The gas Temperature should be in Kelvin so nothing to do here. 
+	GasTemperature = GasTemperature;
+	
+	// Gas Pressure is in millitorr which is 0.13332237 pascals which is in kilograms*meters^-1* seconds^-2
+	// So take it to Pascals then to grams by multipling by 1000. Then to our units.
+	GasPressure *= 0.13332237;
+	GasPressure *= 1000.0;
+	GasPressure /= MassUnit/(LengthUnit*TimeUnit*TimeUnit);
+	
+	// The neutral Gas Mass is in Daltons which is 1.66054E-24 grams
+	// So take it to grams then to our units.
+	NeutralGasMass *= 1.66054e-24;
+	NeutralGasMass /= MassUnit;
 
-	// CutOffMultiplier is just a multiplier so no adjustment is needed.
 	// Dt is a fraction of the time unit so no need to change
+	Dt = Dt;
+	
 	// DrawRate is just a number of step between drawing so no change needed.
+	DrawRate = DrawRate;
 	
 	// Printing out just for a spot check
-	printf("\n These are what all the basic constants in our units for a spot check\n");
-	printf("\n NumberOfDustParticles = %d", NumberOfDustParticles);
-	printf("\n Gravity = %e", Gravity);
-	printf("\n DustDensity = %e", DustDensity);
-	printf("\n BaseDustDiameter = %e", BaseDustDiameter);
-	printf("\n DustDiameterStandardDeviation = %e", DustDiameterStandardDeviation);
-	if (DustDistributionType == 0) printf("\n Using log normal distribution.");
-	else printf("\n Using truncated normal distribution.");
-	printf("\n CoulombConstant = %e", CoulombConstant);
-	printf("\n ElectronCharge = %e", ElectronCharge);
-	printf("\n BaseElectronsPerUnitDiameter = %e", BaseElectronsPerUnitDiameter);
-	printf("\n BaseElectronsPerUnitDiameter*BaseDustDiameter = %e", BaseElectronsPerUnitDiameter*BaseDustDiameter);
-	printf("\n electronStdPerUnitDiameter = %e", electronStdPerUnitDiameter);
-	printf("\n electronStdPerUnitDiameter*BaseDiameter = %e", electronStdPerUnitDiameter*BaseDustDiameter);
-	printf("\n IonDebyeLength = %e", IonDebyeLength);
-	printf("\n CutOffMultiplier = %e", CutOffMultiplier);
-	printf("\n SheathHeight = %e", SheathHeight);
-	printf("\n BaseIonWakeFractionalCharge = %e", BaseIonWakeFractionalCharge);
-	printf("\n ChargeExchangeFraction = %f fraction of charge transfer", ChargeExchangeFraction);
-	printf("\n BaseIonWakeLength = %e", BaseIonWakeLength);
-	printf("\n RadialConfinementStrength = %e", RadialConfinementStrength);
-	printf("\n RadialConfinementScale = %e", RadialConfinementScale);
-	printf("\n RadialConfinementHeight = %e", RadialConfinementHeight);
-	printf("\n BottomPlateForcingParameter = %e", BottomPlateForcingParameter);
-	printf("\n Drag = %e", Drag);
+	printf("\n These are the values read in from the simulation setup file in our units.\n");
+	printf("\n NumberOfDustParticles................ %d", NumberOfDustParticles);
+	printf("\n Gravity.............................. %e", Gravity);
+	printf("\n DustDensity.......................... %e", DustDensity);
+	printf("\n BaseDustDiameter..................... %e", BaseDustDiameter);
+	printf("\n DustDiameterStandardDeviation........ %e", DustDiameterStandardDeviation);
+	if (DustDistributionType == 0) 
+	printf("\n Using log normal distribution.");
+	else 
+	printf("\n Using truncated normal distribution.");
+	printf("\n CoulombConstant...................... %e", CoulombConstant);
+	printf("\n ElectronCharge....................... %e", ElectronCharge);
+	printf("\n BaseElectronsPerUnitDiameter......... %e", BaseElectronsPerUnitDiameter);
+	printf("\n electronStdPerUnitDiameter........... %e", electronStdPerUnitDiameter);
+	printf("\n IonDebyeLength....................... %e", IonDebyeLength);
+	printf("\n CutOffMultiplier..................... %e", CutOffMultiplier);
+	printf("\n SheathHeight......................... %e", SheathHeight);
+	printf("\n BaseIonWakeFractionalCharge.......... %e", BaseIonWakeFractionalCharge);
+	printf("\n ChargeExchangeFraction............... %f fraction of charge transfer", ChargeExchangeFraction);
+	printf("\n BaseIonWakeLength.................... %e", BaseIonWakeLength);
+	printf("\n RadialConfinementStrength............ %e", RadialConfinementStrength);
+	printf("\n RadialConfinementScale............... %e", RadialConfinementScale);
+	printf("\n RadialConfinementHeight.............. %e", RadialConfinementHeight);
+	printf("\n BottomPlateForcingParameter.......... %e", BottomPlateForcingParameter);
+	printf("\n BoltzmannConstant.................... %e", BoltzmannConstant);
+	printf("\n EpsteinConstant...................... %e", EpsteinConstant);
+	printf("\n GasTemperature....................... %e", GasTemperature);
+	printf("\n GasPressure.......................... %e", GasPressure);
+	printf("\n NeutralGasMass....................... %e", NeutralGasMass);
 	printf("\n Dt = %e", Dt);
 	printf("\n DrawRate = %d", DrawRate);
+	
+	// Now we need to get the gas pressure constant to multiply by the (GasPressure*DustMass)/DustRadius to get dust drag.
+	PressureConstant = 8.0*EpsteinConstant*sqrt(PI*NeutralGasMass)/(PI*DustDensity*sqrt(BoltzmannConstant*GasTemperature));
 	
 	printf("\n\n ********************************************************************************");
 	printf("\n Constants have been put into our units.");
@@ -691,6 +719,14 @@ void setInitialConditions()
 		// IonsWakes are positive and dust grains are negatively charged so you need the negative.
 		IonWakeCPU[i].w = BaseIonWakeFractionalCharge*(-DustPositionCPU[i].w); 
 	}
+	
+	// Remove these lines
+	float ddiameter = DustVelocityCPU[0].w; // dustVel.w holds the ddiameter of the dust.
+	float dradius = ddiameter/2.0f;
+	float dmass = DustForceCPU[0].w;
+	float dragCoefficient = PressureConstant*GasPressure * dmass/dradius;
+	printf("\n\n dragCoefficient = %f, PressureConstant = %f, GasPressure = %f, mass = %f, radius = %f", dragCoefficient, PressureConstant, GasPressure, dmass, dradius);
+	// To here.
 	
 	printf("\n\n ********************************************************************************");
 	printf("\n Initial conditions have been set");
@@ -1084,14 +1120,6 @@ __global__ void getForces(float4 *dustPos, float4 *dustForce, float4 *ionWake, f
 	float dx, dy, dz, d2, d;
 	int yourId;
 
-	// Description of coordinate system (when in side view):
-	// Negative x: left
-	// Positive x: right	
-	// Negative y: down
-	// Positive y: up	
-	// Negative z: backwards
-	// Positive z: forward
-
 	// Positions are not changed here so it need not be carried forward but forces do need to be 
 	// carried forward so it can be used in the move function.
 	
@@ -1114,9 +1142,9 @@ __global__ void getForces(float4 *dustPos, float4 *dustForce, float4 *ionWake, f
 		for(int j = 0; j < gridDim.x; j++)
 		{
 			for(int i = 0; i < blockDim.x; i++)	
-		    {
-		    	yourId = i + blockDim.x*j;
-		    	// Making sure we are not working on ourself and not past the number of particles.
+			{
+				yourId = i + blockDim.x*j;
+				// Making sure we are not working on ourself and not past the number of particles.
 				if(myId != yourId && yourId < numberOfParticles) 
 				{					
 					// Force caused by other dust. 
@@ -1200,7 +1228,7 @@ __global__ void getForces(float4 *dustPos, float4 *dustForce, float4 *ionWake, f
 // This kernel has two main tasks: 
 // The first task is to apply the leapfrog formulas to move the dust forward in time.
 // The second task is to stochastically adjust the number of electrons attached to each dust grain.
-__global__ void moveDust(float4 *dustPos, float4 *dustVel, float4 *dustForce, float drag, float electronCharge, 
+__global__ void moveDust(float4 *dustPos, float4 *dustVel, float4 *dustForce, float gasPressure, float pressureConstant, float electronCharge, 
 						float baseDustDiameter, float baseElectronsPerUnitDiameter, float electronStdPerUnitDiameter, float sheathHeight, float dt, 
 						float time, int numberOfDustParticles)
 {
@@ -1212,12 +1240,15 @@ __global__ void moveDust(float4 *dustPos, float4 *dustVel, float4 *dustForce, fl
 	{
 		// Using the leapfrog formulas to move the dust forward in time.
 		float diameter = dustVel[id].w; // dustVel.w holds the diameter of the dust.
-		float invMass = 1.0f / dustForce[id].w; // dustForce.w is mass of the dust.
+		float radius = diameter/2.0f;
+		float mass = dustForce[id].w;
+		float invMass = 1.0f / mass; // dustForce.w is mass of the dust.
 		float charge = dustPos[id].w; // dustPos.w holds the charge of the dust.
 
-		// diameter^2 = (2*radius)^2 = 4*radius^2
-		// (1/4)*drag*diameter^2 = drag*radius^2
-		float dragCoefficient = drag * diameter * diameter * 0.25f;
+		float dragCoefficient = pressureConstant*gasPressure*mass/radius;
+		
+		// remove this line.
+		//if(id == 0) printf("dragCoefficient = %f\n", dragCoefficient);
 
 		// When time is 0 in leapfrog, move the velocities forward a half time step.
 		if(time == 0.0)
@@ -1246,7 +1277,7 @@ __global__ void moveDust(float4 *dustPos, float4 *dustVel, float4 *dustForce, fl
 		// dustPos.w carries the charge and dustVel.w carries the diameter.
 
 		// Initailizing the cudarand function.
-		curand_init(clock64(), id, 0, &state); // TODO: Read up on curand() function
+		curand_init(clock64(), id, 0, &state);
 		// This gets a random number with mean 0.0 and stDev 1.0;.
 		randomNumber = curand_normal(&state);
 		// This sets the electron fluctuation for this sized dust grain and makes it the stDev.
@@ -1319,20 +1350,11 @@ void n_body()
 
 		if(Freeze == 0)
 		{
-			moveDust<<<Grid, Block>>>(DustPositionGPU, DustVelocityGPU, DustForceGPU, Drag, 
+			moveDust<<<Grid, Block>>>(DustPositionGPU, DustVelocityGPU, DustForceGPU, GasPressure, PressureConstant,
 					ElectronCharge, BaseDustDiameter, BaseElectronsPerUnitDiameter, electronStdPerUnitDiameter, 
 					SheathHeight, Dt, RunTime, NumberOfDustParticles);
 			cudaDeviceSynchronize();
 		}
-		
-		/*		
-		cudaMemcpy( DustPositionCPU, DustPositionGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
-		errorCheck("cudaMemcpy DustPositionCPU down");
-		cudaMemcpy( IonWakeCPU, IonWakeGPU, NumberOfDustParticles*sizeof(float4), cudaMemcpyDeviceToHost);
-		errorCheck("cudaMemcpy IonWakeCPU down");
-		cudaMemcpy( DustParentChildCPU, DustParentChildGPU, NumberOfDustParticles*sizeof(dustParentChildStructure), cudaMemcpyDeviceToHost);
-		errorCheck("cudaMemcpy DustParentChildCPU down");
-		*/
 		
 		DrawTimer++;
 		if(DrawTimer >= DrawRate) 
@@ -1405,7 +1427,7 @@ void terminalPrint()
 	
 	printf(" \033[0m(V/v: +/-) Bottom plate Forcing Parameter... \033[1;33m%e\n", BottomPlateForcingParameter*(MassUnit)/(TimeUnit*TimeUnit*ChargeUnit));
 	printf(" \033[0m(C/c: +/-) Radial Confinement Strength...... \033[1;33m%e\n", RadialConfinementStrength*(MassUnit*LengthUnit)/(TimeUnit*TimeUnit*ChargeUnit));
-	printf(" \033[0m(P/p: +/-) Gas Pressure in millitorr........ \033[1;33m%e\n", GasPressure);
+	printf(" \033[0m(P/p: +/-) Gas Pressure in millitorr........ \033[1;33m%e\n", GasPressure*MassUnit/(LengthUnit*TimeUnit*TimeUnit)/133.32237);
 	printf(" \033[0m(I/i: +/-) BaseIonWakeFractionalCharge...... \033[1;33m%f\n", BaseIonWakeFractionalCharge);
 	printf(" \033[0m(D/d: +/-) Time steps between screen draws.. \033[1;33m%d\n", DrawRate);
 	printf("\n");
@@ -1455,7 +1477,7 @@ void terminalPrint()
 	
 	printf("\n");
 	printf("\033[0m");
-	printf(" (e) Four way switch - XYZ adjustment\n Eye Position, Dust Position, Dust Velocity, X Dust Diameter:");
+	printf(" (e) Four way switch - XYZ adjustment\n Eye Position, Dust Position, Dust Velocity, Dust Diameter:");
 	if (XYZAdjustments == 0) 
 	{
 		//printf("\033[0;36m"); // cyan
@@ -1479,9 +1501,9 @@ void terminalPrint()
 	
 	printf("\033[0m");
 	//printf(" (w) Top view/Side view toggle\n");
-	printf(" (X/x) +/-\n");
-	printf(" (Y/y) +/-\n");
-	printf(" (Z/z) +/-\n");
+	printf(" (X/x: +/-)\n");
+	printf(" (Y/y: +/-)\n");
+	printf(" (Z/z: +/-)\n");
 	printf("\n");
 	
 	printf("\033[0m");    // white
@@ -1586,19 +1608,19 @@ void setup()
 	PreviouslySelectedGrain = -1;
 	DustViewingAids = 1; // On by default.
 	
-	printf("\nThe simulation is paused. Press the r key to start.\n");
+	printf("\n\033[0;31mThe simulation is paused. Press the r key to start.\n");
 }
 
 void errorCheck(const char *message)
 {
-  cudaError_t  error;
-  error = cudaGetLastError();
+	cudaError_t  error;
+	error = cudaGetLastError();
 
-  if(error != cudaSuccess)
-  {
-    printf("\n CUDA ERROR: %s = %s\n", message, cudaGetErrorString(error));
-    exit(0);
-  }
+	if(error != cudaSuccess)
+	{
+		printf("\n CUDA ERROR: %s = %s\n", message, cudaGetErrorString(error));
+		exit(0);
+	}
 }
 
 void processMainMenuEvents(int option);
@@ -1620,6 +1642,8 @@ void createGLUTMenus() {
 	glutAddMenuEntry("Side View", SIDE_VIEW);
 	glutAddMenuEntry("Run Simulation", RUN_SIMULATION);
 	glutAddMenuEntry("Pause Simulation", PAUSE_SIMULATION);
+	glutAddMenuEntry("Freeze Simulation", FREEZE_SIMULATION);
+	glutAddMenuEntry("Unfreeze Simulation", UNFREEZE_SIMULATION);
 }
 
 void processMainMenuEvents(int option) 
@@ -1690,6 +1714,16 @@ void processMainMenuEvents(int option)
 			terminalPrint();
 			drawPicture();
 			break;
+		case FREEZE_SIMULATION:
+			Freeze = 1;
+			terminalPrint();
+			drawPicture();
+			break;
+		case UNFREEZE_SIMULATION:
+			Freeze = 0;
+			terminalPrint();
+			drawPicture();
+			break;
 	}
 }
 
@@ -1704,15 +1738,11 @@ int main(int argc, char** argv)
 	Near = 0.2;
 	Far = 80.0*RadialConfinementScale;
 
-	//Direction where your eye is located
+	//Where your eye is located
 	EyeX = 0.0*RadialConfinementScale;
 	EyeY = 0.5*RadialConfinementHeight;
-	EyeZ = 3.0*RadialConfinementScale;
+	EyeZ = 2.0*RadialConfinementScale;
 	
-	//EyeX = 0.01*RadialConfinementScale;
-	//EyeY = RadialConfinementHeight;
-	//EyeZ = 0.0*RadialConfinementScale;
-
 	//Where you are looking
 	CenterX = 0.0;
 	CenterY = 0.5*RadialConfinementHeight;
@@ -1755,6 +1785,7 @@ int main(int argc, char** argv)
 	GLfloat lmodel_ambient[] = {0.2, 0.2, 0.2, 1.0};
 	GLfloat mat_specular[]   = {1.0, 1.0, 1.0, 1.0};
 	GLfloat mat_shininess[]  = {10.0};
+	
 	glShadeModel(GL_SMOOTH);
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
