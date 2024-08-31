@@ -25,7 +25,7 @@
 <img src="ReadMeImages/SideView2.jpeg" width=45% height=45% class='center'></img>
 ### Parent-Child Relationship Top View
 <img src="ReadMeImages/Parent-Child-Top-Viewa.jpeg" width=45% height=45% class='center'></img>
-<img src="ReadMeImages/Parent-Child-Top-Viewa.jpeg" width=45% height=45% class='center'></img>
+<img src="ReadMeImages/Parent-Child-Top-Viewb.jpeg" width=45% height=45% class='center'></img>
 ### Parent-Child Relationship Side View and Three Isolated Dust Grains
 <img src="ReadMeImages/Parent-Child-Side-View.jpeg" width=45% height=45% class='center'></img>
 <img src="ReadMeImages/Parent-Child-Three.jpeg" width=45% height=45% class='center'></img>
