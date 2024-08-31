@@ -1,4 +1,4 @@
-# Interavtive Complex Plasma Crystal Tortions Model
+# Interavtive Complex Plasma Crystal Model
 
 ### Table of Contents
 - [Selected Pics](#selected-pics)
