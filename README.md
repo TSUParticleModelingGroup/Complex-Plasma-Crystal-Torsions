@@ -132,10 +132,10 @@ Refer to the changelog for details.
 <a id="contributing-authors"></a>
 ## Contributing Authors
   - Zachary Watson
+  - Parker Adamson
   - Jorge Martinez Ortiz
   - Samuel Garcia-Rodriguez
   - Katrina Vermillion
-  - Parker Adamson
   - Calvin Carmichael
   - Lorin Matthews
   - Truell Hyde
