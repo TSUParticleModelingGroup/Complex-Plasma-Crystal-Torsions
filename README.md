@@ -142,5 +142,6 @@ Program.
 
 <a id="acknowledgements"></a>
 ## Acknowledgements
-We would like to thank Tarleton State University’s Mathematics Department for use of
-their High-Performance Computing lab for the duration of this project.
+We would like to thank Tarleton State University’s Mathematics Department for the use of their 
+High-Performance Computing lab and the Center for Astrophysics, Space Physics, 
+and Engineering Research (CASPER) at Baylor University for access to their complex plasma lab.
