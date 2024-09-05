@@ -1,0 +1,104 @@
+---------------------- Help File for the Complex Plasmas Simulation Program ----------------------
+
+Requirements to Run the Simulation:
+- Nvidia CUDA Toolkit: Must be installed.
+- GCC/GPP: Required compilers.
+- FFMPEG: Needed for video recording and screenshots.
+
+Basics:
+- Program Start: The program begins in a paused state, displaying variables in both real-world units
+  and program units for verification.
+- Starting and Quitting:
+  - Press 'r' to unpause and start the simulation.
+  - Press 'q' to quit the application.
+- Recording and Screenshots:
+  - To record videos, press 'm' to start and 'M' to stop recording.
+  - To take a screenshot, press 's'.
+  - Note: FFMPEG must be installed, or the program will crash when attempting to record.
+  - Additional Note: Changing the movie resolution requires modifying the code to adjust the window
+    size and recompiling. Refer to the README for more details.
+
+Note on Visual Aids
+The magenta-green lines shown in the simulation are a visualization feature used to demonstrate
+parent-child relationships, explained in our paper. The magenta color is shown at the parent dust,
+and the green line with the arrow end, is at the child dust end. This allows the hierarchical
+relationships between the dust to be seen in real-time, and are easily turned off with the other
+visual aids via a toggle 'g'.
+
+Complete List of Controls:
+- General Controls:
+  - 'q' - Quit the application.
+  - 'h' - Print this help menu to the console.
+  - 'm' - Start recording a movie.
+  - 'M' - Stop recording a movie.
+  - 's' - Take a screenshot of the simulation window.
+
+- Simulation Controls:
+  - 'V' - Increase power on the lower plate.
+  - 'v' - Decrease power on the lower plate.
+  - 'C' - Increase power on the side cavity.
+  - 'c' - Decrease power on the side cavity.
+  - 'P' - Increase gas pressure (in milliTorr).
+  - 'p' - Decrease gas pressure (in milliTorr).
+  - 'I' - Increase BaseIonWakeFractionalCharge.
+  - 'i' - Decrease BaseIonWakeFractionalCharge.
+  - 'D' - Increase time steps between draws.
+  - 'd' - Decrease time steps between draws.
+
+- View Controls:
+  - 'w' - Toggle between top and side view.
+  - 'o' - Toggle between fulstrum (perspective) and orthographic view.
+  - '!' - Recenter the view.
+
+- Camera and Dust Grain Controls:
+  - 'e' - Toggle between adjusting the eye (camera) position, dust position, dust velocity, and dust
+          diameter (requires dust to be selected).
+  - 'x'/'X' - Translate right/left.
+  - 'y'/'Y' - Translate up/down.
+  - 'z'/'Z' - Translate away from/towards the viewer.
+
+- Simulation Toggles:
+  - 'r' - Toggle between running and pausing the simulation.
+  - 'f' - Toggle dust freezing on/off (see Dust Grain Selection section for details).
+  - 't' - Toggle tracer on/off (shows the path of particles without erasing them each time step).
+  - 'a' - Toggle viewing aids on/off (e.g., Debye Length marker, top/bottom boundaries).
+  - 'g' - Toggle dust pair viewing on/off (draws a line between dust grains and their companions).
+
+Note: Many of these options are also available through the right-click menu, which provides graphical 
+quick-access versions of the toggle controls. The first option in the right-click menu is "Select a dust grain" 
+(see Dust Grain Selection below for details).
+
+---------------------- Dust Grain Selection ----------------------
+
+- Selecting a Dust Grain:
+  - Right-click on the simulation window and choose "Select a dust grain."
+  - Recommendation: Use the '!' control to recenter the view before selecting a dust grain to ensure 
+    accurate selection.
+  - The program will automatically switch to orthographic mode. Toggle back with 'o' or use the 
+    right-click menu to choose "fulstrum."
+  - Click on a dust grain to select it. The selected dust will turn blue.
+  - Upon selection, the program will remain in the current view, and will remain paused. Pressing 'r'
+    will unpause the simulation.
+
+- Adjusting Position, Velocity, and Diameter:
+  - Use 'e' or the right-click menu to toggle into dust position adjustment mode.
+  - Use the 'x', 'y', and 'z' controls to move the dust grain.
+  - Note: Dust will still be affected by forces. Use 'f' to freeze dust movement for free adjustment. 
+    This will freeze ALL dust movement.
+  - To adjust velocity, toggle with 'e' or use the right-click menu, and the 'x', 'y', and 'z' controls 
+    will affect the dust's velocity.
+  - To adjust diameter, toggle with 'e' or use the right-click menu. Use the 'x' button or 'X' to decrease 
+    or increase the diameter of the selected dust. 'y/Y' and 'z/Z' will do nothing in this mode. 
+
+---------------------- Point Charge Adjustments ----------------------
+
+- Preselect Dust Grains:
+  - For experimental purposes, and for visualization of point charge adjustments governed by equations in
+    our paper, this mode is included to preselect and lift dust grains using keys '2', '3', and '4'.
+  - Press '2' to view two dust grains. The bottom dust grain will be selected by default. Use 'e' or the 
+    right-click menu to adjust its position, velocity, or diameter.
+  - Keys '3' and '4' will similarly select 3 or 4 dust grains.
+  - Note: in each case, all dust grains will be the x-y plane (they will have the same z value, for 
+    simplicity).
+
+
